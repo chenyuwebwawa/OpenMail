@@ -1,0 +1,46 @@
+{
+  "name": "openmail",
+  "version": "1.0.0",
+  "description": "OpenMail - 自托管开源邮件服务器套件：SMTP/IMAP/POP3/JMAP-ready、Webmail、管理后台、多域名、DKIM、反垃圾",
+  "type": "module",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "setup": "node server/setup.js",
+    "langpacks": "node scripts/install-langpacks.mjs --status",
+    "test": "node tests/e2e.mjs"
+  },
+  "keywords": [
+    "mail-server",
+    "smtp",
+    "imap",
+    "pop3",
+    "webmail",
+    "self-hosted",
+    "dkim",
+    "dmarc",
+    "spf",
+    "anti-spam",
+    "mail",
+    "email"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "dkim-signer": "^0.2.2",
+    "express": "^5.1.0",
+    "mailauth": "^4.8.0",
+    "mailparser": "^3.7.4",
+    "nodemailer": "^7.0.9",
+    "qrcode": "^1.5.4",
+    "selfsigned": "^3.0.1",
+    "smtp-server": "^3.13.6"
+  },
+  "devDependencies": {
+    "imapflow": "^1.0.221"
+  }
+}

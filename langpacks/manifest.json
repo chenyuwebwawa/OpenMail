@@ -1,0 +1,12 @@
+{
+  "packs": [
+    { "code": "fr", "name": "Français", "file": "fr.json", "rtl": false },
+    { "code": "es", "name": "Español", "file": "es.json", "rtl": false },
+    { "code": "pt", "name": "Português", "file": "pt.json", "rtl": false },
+    { "code": "ru", "name": "Русский", "file": "ru.json", "rtl": false },
+    { "code": "ar", "name": "العربية", "file": "ar.json", "rtl": true },
+    { "code": "hi", "name": "हिन्दी", "file": "hi.json", "rtl": false },
+    { "code": "bn", "name": "বাংলা", "file": "bn.json", "rtl": false },
+    { "code": "ur", "name": "اردو", "file": "ur.json", "rtl": true }
+  ]
+}

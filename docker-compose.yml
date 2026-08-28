@@ -1,0 +1,39 @@
+services:
+  openmail:
+    build: .
+    image: openmail:latest
+    container_name: openmail
+    restart: unless-stopped
+    ports:
+      - "3000:3000"    # Webmail / 管理后台 / API
+      - "25:25"        # SMTP MX 收信
+      - "587:587"      # SMTP Submission（SASL 认证发信）
+      - "465:465"      # SMTPS 隐式 TLS
+      - "143:143"      # IMAP
+      - "993:993"      # IMAPS
+      - "110:110"      # POP3
+      - "995:995"      # POP3S
+    environment:
+      OM_SITE_NAME: OpenMail
+      # 改成你的域名与对外地址
+      OM_PRIMARY_DOMAIN: example.com
+      OM_BASE_URL: https://mail.example.com
+      OM_ADMIN_EMAIL: admin@example.com
+      OM_SECRET: change-me-to-a-long-random-string
+      OM_REGISTRATION: "true"
+      # 生产建议配置出站中继（云厂商一般封 25 出站）：
+      # OM_RELAY_HOST: smtp.sendgrid.net
+      # OM_RELAY_PORT: "587"
+      # OM_RELAY_USER: apikey
+      # OM_RELAY_PASS: SG.xxxx
+      # TLS 证书（Let's Encrypt）：
+      # OM_TLS_CERT: /certs/fullchain.pem
+      # OM_TLS_KEY: /certs/privkey.pem
+    volumes:
+      - ./data:/app/data      # SQLite 数据库 + 自签证书
+      - ./files:/app/files    # 附件
+      # - ./certs:/certs:ro   # 外部 TLS 证书
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
