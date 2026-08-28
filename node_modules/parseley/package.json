@@ -1,0 +1,103 @@
+{
+  "name": "parseley",
+  "version": "0.13.1",
+  "description": "CSS selectors parser",
+  "keywords": [
+    "CSS",
+    "selectors",
+    "parser",
+    "AST",
+    "serializer",
+    "specificity"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mxxii/parseley.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mxxii/parseley/issues"
+  },
+  "homepage": "https://github.com/mxxii/parseley",
+  "author": "KillyMXI",
+  "funding": "https://github.com/sponsors/KillyMXI",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./lib/parseley.d.mts",
+        "default": "./lib/parseley.mjs"
+      },
+      "require": {
+        "types": "./lib/parseley.d.cts",
+        "default": "./lib/parseley.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "type": "module",
+  "main": "./lib/parseley.cjs",
+  "module": "./lib/parseley.mjs",
+  "types": "./lib/parseley.d.cts",
+  "files": [
+    "lib"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build:deno": "denoify",
+    "build:docs": "typedoc",
+    "build:rollup": "rollup -c",
+    "build:types": "tsc --declaration --emitDeclarationOnly",
+    "build": "npm run clean && npm run build:rollup && npm run build:types && npm run build:docs && npm run build:deno",
+    "checkAll": "npm run lint && npm test",
+    "clean": "rimraf lib",
+    "example": "node ./example/example.mjs",
+    "lint:eslint": "eslint .",
+    "lint:md": "markdownlint-cli2",
+    "lint": "npm run lint:eslint && npm run lint:md",
+    "prepublishOnly": "npm run build && npm run checkAll",
+    "test": "ava"
+  },
+  "dependencies": {
+    "leac": "^0.7.0",
+    "peberminta": "^0.10.0"
+  },
+  "devDependencies": {
+    "@rollup/plugin-typescript": "^12.3.0",
+    "@stylistic/eslint-plugin": "^5.6.1",
+    "@tsconfig/node20": "^20.1.8",
+    "@types/node": "^20.19.27",
+    "@typescript-eslint/eslint-plugin": "^8.50.0",
+    "ava": "^6.4.1",
+    "denoify": "^1.6.17",
+    "eslint": "^9.39.2",
+    "eslint-plugin-jsonc": "^2.21.0",
+    "eslint-plugin-tsdoc": "^0.5.0",
+    "markdownlint-cli2": "^0.20.0",
+    "rimraf": "^6.1.2",
+    "rollup": "~4.54.0",
+    "rollup-plugin-cleanup": "^3.2.1",
+    "rollup-plugin-delete": "^3.0.2",
+    "rollup-plugin-dts": "^6.3.0",
+    "ts-blank-space": "^0.6.2",
+    "tslib": "^2.8.1",
+    "typedoc": "~0.28.15",
+    "typedoc-plugin-markdown": "~4.9.0",
+    "typescript": "~5.8.3",
+    "typescript-eslint": "^8.50.0"
+  },
+  "ava": {
+    "extensions": {
+      "ts": "module"
+    },
+    "files": [
+      "test/**/*"
+    ],
+    "nodeArguments": [
+      "--import=ts-blank-space/register"
+    ],
+    "verbose": true
+  },
+  "denoify": {
+    "out": "./deno"
+  }
+}

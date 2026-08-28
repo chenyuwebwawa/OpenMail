@@ -1,0 +1,30 @@
+{
+  "name": "dkim-signer",
+  "version": "0.2.2",
+  "description": "DKIM signing code extracted from mailcomposer",
+  "main": "lib/dkim.js",
+  "scripts": {
+    "test": "nodeunit test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/andris9/dkim-signer.git"
+  },
+  "keywords": [
+    "DKIM",
+    "SMTP",
+    "mailcomposer"
+  ],
+  "author": "Andris Reinman",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/andris9/dkim-signer/issues"
+  },
+  "homepage": "https://github.com/andris9/dkim-signer",
+  "dependencies": {
+    "libmime": "^2.0.3"
+  },
+  "devDependencies": {
+    "nodeunit": "~0.9.1"
+  }
+}

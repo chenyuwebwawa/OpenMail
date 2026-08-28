@@ -1,0 +1,19 @@
+{
+  "name": "ipv6-normalize",
+  "version": "1.0.1",
+  "description": "ipv6-normalize",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "author": "Po-Ying Chen <poying.me@gmail.com> (陳柏穎)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/poying/ipv6-normalize.git"
+  },
+  "bugs": {
+    "url": "https://github.com/poying/ipv6-normalize/issues"
+  },
+  "homepage": "https://github.com/poying/ipv6-normalize"
+}

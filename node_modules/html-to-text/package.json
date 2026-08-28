@@ -1,0 +1,70 @@
+{
+  "name": "html-to-text",
+  "version": "10.0.1",
+  "description": "Advanced html to plain text converter",
+  "keywords": [
+    "html",
+    "node",
+    "text",
+    "mail",
+    "plain",
+    "converter"
+  ],
+  "license": "MIT",
+  "author": "Malte Legenhausen <legenhausen@werk85.de>",
+  "contributors": [
+    "KillyMXI <killy@mxii.eu.org>"
+  ],
+  "funding": "https://github.com/sponsors/KillyMXI",
+  "homepage": "https://github.com/html-to-text/node-html-to-text",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/html-to-text/node-html-to-text.git"
+  },
+  "bugs": {
+    "url": "https://github.com/html-to-text/node-html-to-text/issues"
+  },
+  "type": "module",
+  "main": "./lib/html-to-text.cjs",
+  "module": "./lib/html-to-text.mjs",
+  "exports": {
+    ".": {
+      "import": "./lib/html-to-text.mjs",
+      "require": "./lib/html-to-text.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "build:rollup": "rollup -c",
+    "build": "npm run clean && npm run build:rollup && npm run copy:license",
+    "clean": "rimraf lib",
+    "clean:snapshots": "rimraf --glob \"test/**/*.snap\" \"test/**/*.js.md\"",
+    "copy:license": "copyfiles -f ../../LICENSE .",
+    "cover": "c8 --reporter=lcov --reporter=text-summary ava --timeout=20000",
+    "test": "ava"
+  },
+  "dependencies": {
+    "@selderee/plugin-htmlparser2": "~0.12.0",
+    "deepmerge-ts": "^8.0.1",
+    "dom-serializer": "^2.0.0",
+    "htmlparser2": "^10.1.0",
+    "selderee": "~0.12.0"
+  },
+  "ava": {
+    "files": [
+      "test/general/**/*.js",
+      "test/tags/**/*.js",
+      "test/documents/**/*.js"
+    ],
+    "snapshotDir": "."
+  }
+}

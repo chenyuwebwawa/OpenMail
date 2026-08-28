@@ -1,0 +1,267 @@
+# Changelog
+
+## [3.9.17](https://github.com/nodemailer/mailparser/compare/v3.9.16...v3.9.17) (2026-08-27)
+
+
+### Bug Fixes
+
+* **deps:** update nodemailer to 9.0.6 ([26c7ccb](https://github.com/nodemailer/mailparser/commit/26c7ccb129fe6554613d7af12fb2b362e64e6d82))
+
+## [3.9.16](https://github.com/nodemailer/mailparser/compare/v3.9.15...v3.9.16) (2026-08-24)
+
+
+### Bug Fixes
+
+* bound linkify-it scanning of untrusted text bodies ([1910471](https://github.com/nodemailer/mailparser/commit/1910471a4edd72249237ce7ad243228d61c4908f))
+* **deps:** update html-to-text to 10.0.1 ([308e1b2](https://github.com/nodemailer/mailparser/commit/308e1b2993e554470ecbd3570cdd18a394b866b3))
+
+## [3.9.15](https://github.com/nodemailer/mailparser/compare/v3.9.14...v3.9.15) (2026-08-07)
+
+
+### Bug Fixes
+
+* update dependencies (@zone-eu/mailsplit 5.4.15, libmime 5.4.2, nodemailer 9.0.5) ([047379d](https://github.com/nodemailer/mailparser/commit/047379df5537d799e21b410a7c9019872579ff5a))
+
+## [3.9.14](https://github.com/nodemailer/mailparser/compare/v3.9.13...v3.9.14) (2026-07-05)
+
+
+### Bug Fixes
+
+* update dependencies (@zone-eu/mailsplit 5.4.14) ([595b150](https://github.com/nodemailer/mailparser/commit/595b150e760af9c5044c4b3c53b3c7ca669f6057))
+
+## [3.9.13](https://github.com/nodemailer/mailparser/compare/v3.9.12...v3.9.13) (2026-07-05)
+
+
+### Bug Fixes
+
+* update dependencies (nodemailer 9.0.3, iconv-lite 0.7.3, libmime 5.4.1) ([999e77b](https://github.com/nodemailer/mailparser/commit/999e77bf86f9e404bc9fb89cb5dc89cc1f84a577))
+
+## [3.9.12](https://github.com/nodemailer/mailparser/compare/v3.9.11...v3.9.12) (2026-06-25)
+
+
+### Bug Fixes
+
+* decode iso-8859-8-i and iso-8859-8-e charsets as iso-8859-8 ([3e4b7fc](https://github.com/nodemailer/mailparser/commit/3e4b7fc00429a85f6b4c41da13deaf5be3087eed))
+
+## [3.9.11](https://github.com/nodemailer/mailparser/compare/v3.9.10...v3.9.11) (2026-06-19)
+
+
+### Bug Fixes
+
+* bump nodemailer to 9.0.1 ([020f140](https://github.com/nodemailer/mailparser/commit/020f140e67e98ac65c1d56d48c838986f7decc8a))
+
+## [3.9.10](https://github.com/nodemailer/mailparser/compare/v3.9.9...v3.9.10) (2026-06-15)
+
+
+### Bug Fixes
+
+* bump dependencies (nodemailer 9, eslint 10.5, prettier 3.8.4) ([262ecff](https://github.com/nodemailer/mailparser/commit/262ecffcd649a6b0d4164271cc7a2662f9789f64))
+
+## [3.9.9](https://github.com/nodemailer/mailparser/compare/v3.9.8...v3.9.9) (2026-05-29)
+
+
+### Bug Fixes
+
+* bumped deps ([7a83b91](https://github.com/nodemailer/mailparser/commit/7a83b9184509c15faa580e91ac7a7b1e8f3b1090))
+
+## [3.9.8](https://github.com/nodemailer/mailparser/compare/v3.9.7...v3.9.8) (2026-04-08)
+
+
+### Bug Fixes
+
+* Bumped deps ([ea415b2](https://github.com/nodemailer/mailparser/commit/ea415b20985f0ebb5e4795b5fb4623d9a58006b3))
+
+## [3.9.7](https://github.com/nodemailer/mailparser/compare/v3.9.6...v3.9.7) (2026-04-08)
+
+
+### Bug Fixes
+
+* Bumped deps ([35cf54f](https://github.com/nodemailer/mailparser/commit/35cf54fb62167796f216bb6561f92e55e1246e48))
+
+## [3.9.6](https://github.com/nodemailer/mailparser/compare/v3.9.5...v3.9.6) (2026-03-25)
+
+
+### Bug Fixes
+
+* bump nodemailer to 8.0.4 ([b2d7f77](https://github.com/nodemailer/mailparser/commit/b2d7f77b514da996c76d49b146e7e37b598a622a))
+
+## [3.9.5](https://github.com/nodemailer/mailparser/compare/v3.9.4...v3.9.5) (2026-03-23)
+
+
+### Bug Fixes
+
+* Bumped deps ([1556b84](https://github.com/nodemailer/mailparser/commit/1556b8437b417f8fe60c202bf758ef078f0a7f0a))
+
+## [3.9.4](https://github.com/nodemailer/mailparser/compare/v3.9.3...v3.9.4) (2026-03-09)
+
+
+### Bug Fixes
+
+* bump nodemailer to 8.0.2 for unquoted comma-in-display-name parsing ([dd71f08](https://github.com/nodemailer/mailparser/commit/dd71f0817fb229aa1ffb421b9384704e550993ca))
+* filter false values from empty References headers ([9884e5d](https://github.com/nodemailer/mailparser/commit/9884e5dd34b9dff9a45f6c205281a50d702a23b1)), closes [#385](https://github.com/nodemailer/mailparser/issues/385)
+* prevent RFC 2047 encoded-word address fabrication in decodeAddresses ([08b800c](https://github.com/nodemailer/mailparser/commit/08b800cd1c5a2ec2341ad4c7f25dc65f584b3999))
+
+## [3.9.3](https://github.com/nodemailer/mailparser/compare/v3.9.2...v3.9.3) (2026-01-28)
+
+
+### Bug Fixes
+
+* escape URLs and link text in textToHtml to prevent XSS ([921a67d](https://github.com/nodemailer/mailparser/commit/921a67df4cfb38f0b411037d7b26fbd4d5411b08)), closes [#412](https://github.com/nodemailer/mailparser/issues/412)
+
+## [3.9.2](https://github.com/nodemailer/mailparser/compare/v3.9.1...v3.9.2) (2026-01-28)
+
+
+### Bug Fixes
+
+* Bumpe deps ([508bcf7](https://github.com/nodemailer/mailparser/commit/508bcf75eb36cfd45600d73eacd7ad1e50fc7466))
+
+## [3.9.1](https://github.com/nodemailer/mailparser/compare/v3.9.0...v3.9.1) (2025-12-11)
+
+
+### Bug Fixes
+
+* update dependencies ([6879d1b](https://github.com/nodemailer/mailparser/commit/6879d1bd7969cd4cc1e1480b4a5acd0215b3cd6c))
+
+## [3.9.0](https://github.com/nodemailer/mailparser/compare/v3.8.1...v3.9.0) (2025-11-05)
+
+
+### Features
+
+* **events:** Emit a new headerLines event to gain access the raw headers ([#364](https://github.com/nodemailer/mailparser/issues/364)) ([d33d7ec](https://github.com/nodemailer/mailparser/commit/d33d7ec4b8e32a4eb7a9a664cec5fdb545c274af))
+
+
+### Bug Fixes
+
+* :arrow_up: update nodemailer dependency to resolve security issue GHSA-9h6g-pr28-7cqp ([#357](https://github.com/nodemailer/mailparser/issues/357)) ([8bc4225](https://github.com/nodemailer/mailparser/commit/8bc42251fca6f538ece599f0a5bebe09b0aeff4f))
+* 150 ([919f69a](https://github.com/nodemailer/mailparser/commit/919f69a49eb1326431c27c7034050498ca504822))
+* 272: Throw TypeError for invalid input. ([abd7e43](https://github.com/nodemailer/mailparser/commit/abd7e43d90e533921c13ed8044a892761ef0535d))
+* 34, bump version ([09aa0bd](https://github.com/nodemailer/mailparser/commit/09aa0bd59c1a70229567ff830adfd44c01605c2f))
+* bumped deps ([9a13f4e](https://github.com/nodemailer/mailparser/commit/9a13f4efca4b209a40f4d57d2edbd019706a82c7))
+* Bumped deps ([bb9c014](https://github.com/nodemailer/mailparser/commit/bb9c014c061def565183205a3ba3d269680f8271))
+* Bumped deps ([9e084f9](https://github.com/nodemailer/mailparser/commit/9e084f9f265ddcfbf8ad3a3e68fc0645d4eb9d1d))
+* Bumped mailsplit to fix flowed parser ([da753e4](https://github.com/nodemailer/mailparser/commit/da753e45ab6d335429bbdb38c5457d04d893d05e))
+* capture decoder end event to use on cleanup ([4e367f7](https://github.com/nodemailer/mailparser/commit/4e367f7fda2505b9edb8e195eb5b1a8e1d1531fc))
+* **deploy:** added auto-deployment ([d6eb56f](https://github.com/nodemailer/mailparser/commit/d6eb56fe09fe8b415e5bbf2e53704f6788ca0fee))
+* **deps:** Bumped deps ([db842ad](https://github.com/nodemailer/mailparser/commit/db842addd36e2fe94d0c4b466da80719a36f47ac))
+* **deps:** Bumped deps to fix issue with missing whitespace ([92884d0](https://github.com/nodemailer/mailparser/commit/92884d0619efa77042ecc35fbc887e93a59e5a93))
+* **deps:** Bumped Nodemailer to fix issue with long data URI's ([d24f96e](https://github.com/nodemailer/mailparser/commit/d24f96e1ff6becccf3ba7f10798481287e0c96b0))
+* **deps:** Replaced 'punycode' with 'punycode.js' module ([4a15157](https://github.com/nodemailer/mailparser/commit/4a15157dc9a815aa0e756d9e6ae0e8631842c447))
+* error on ks_c_5601-1987 ([89572e0](https://github.com/nodemailer/mailparser/commit/89572e000d815704378261c753f59442397b8564))
+* Fix produced text address list string according to rfc 2822 ([#340](https://github.com/nodemailer/mailparser/issues/340)) ([6bae600](https://github.com/nodemailer/mailparser/commit/6bae600a3f4a0452ee7ca43634a11939de7bcc6d))
+* handle simpleParser input stream error ([faf9fc5](https://github.com/nodemailer/mailparser/commit/faf9fc5d8a27c1f88b7a126782d84ce2fef4d4bd))
+* **punycode:** Fixes [#355](https://github.com/nodemailer/mailparser/issues/355) Deprecation warning of the punycode module ([#356](https://github.com/nodemailer/mailparser/issues/356)) ([0f35330](https://github.com/nodemailer/mailparser/commit/0f35330c87d715d38e8c853ae6c2f64d098b971d))
+* **simple-parser:** Buffer.from(string) default encode is utf-8,when input string‘s encode is gbk,result has some garbled ([633e436](https://github.com/nodemailer/mailparser/commit/633e4369c93dc5122c8c8bee0fd2b057761e1223))
+* **test:** updated test matrix (18, 20, 21) ([a2ba9c2](https://github.com/nodemailer/mailparser/commit/a2ba9c236dcd7f990c9d53a386ffaa5b564181b3))
+* trigger new build ([3cf6241](https://github.com/nodemailer/mailparser/commit/3cf62417ffd5185d2461259b1c2580b036210df3))
+* trigger new build ([7f2eb78](https://github.com/nodemailer/mailparser/commit/7f2eb78eda722e369b532b836e02b631d2cbb31c))
+
+## [3.8.1](https://github.com/nodemailer/mailparser/compare/mailparser-v3.8.0...mailparser-v3.8.1) (2025-11-05)
+
+
+### Bug Fixes
+
+* trigger new build ([7f2eb78](https://github.com/nodemailer/mailparser/commit/7f2eb78eda722e369b532b836e02b631d2cbb31c))
+
+## [3.8.0](https://github.com/nodemailer/mailparser/compare/mailparser-v3.7.5...mailparser-v3.8.0) (2025-11-04)
+
+
+### Features
+
+* **events:** Emit a new headerLines event to gain access the raw headers ([#364](https://github.com/nodemailer/mailparser/issues/364)) ([d33d7ec](https://github.com/nodemailer/mailparser/commit/d33d7ec4b8e32a4eb7a9a664cec5fdb545c274af))
+
+
+### Bug Fixes
+
+* :arrow_up: update nodemailer dependency to resolve security issue GHSA-9h6g-pr28-7cqp ([#357](https://github.com/nodemailer/mailparser/issues/357)) ([8bc4225](https://github.com/nodemailer/mailparser/commit/8bc42251fca6f538ece599f0a5bebe09b0aeff4f))
+* 150 ([919f69a](https://github.com/nodemailer/mailparser/commit/919f69a49eb1326431c27c7034050498ca504822))
+* 272: Throw TypeError for invalid input. ([abd7e43](https://github.com/nodemailer/mailparser/commit/abd7e43d90e533921c13ed8044a892761ef0535d))
+* 34, bump version ([09aa0bd](https://github.com/nodemailer/mailparser/commit/09aa0bd59c1a70229567ff830adfd44c01605c2f))
+* bumped deps ([9a13f4e](https://github.com/nodemailer/mailparser/commit/9a13f4efca4b209a40f4d57d2edbd019706a82c7))
+* Bumped deps ([bb9c014](https://github.com/nodemailer/mailparser/commit/bb9c014c061def565183205a3ba3d269680f8271))
+* Bumped deps ([9e084f9](https://github.com/nodemailer/mailparser/commit/9e084f9f265ddcfbf8ad3a3e68fc0645d4eb9d1d))
+* Bumped mailsplit to fix flowed parser ([da753e4](https://github.com/nodemailer/mailparser/commit/da753e45ab6d335429bbdb38c5457d04d893d05e))
+* capture decoder end event to use on cleanup ([4e367f7](https://github.com/nodemailer/mailparser/commit/4e367f7fda2505b9edb8e195eb5b1a8e1d1531fc))
+* **deploy:** added auto-deployment ([d6eb56f](https://github.com/nodemailer/mailparser/commit/d6eb56fe09fe8b415e5bbf2e53704f6788ca0fee))
+* **deps:** Bumped deps ([db842ad](https://github.com/nodemailer/mailparser/commit/db842addd36e2fe94d0c4b466da80719a36f47ac))
+* **deps:** Bumped deps to fix issue with missing whitespace ([92884d0](https://github.com/nodemailer/mailparser/commit/92884d0619efa77042ecc35fbc887e93a59e5a93))
+* **deps:** Bumped Nodemailer to fix issue with long data URI's ([d24f96e](https://github.com/nodemailer/mailparser/commit/d24f96e1ff6becccf3ba7f10798481287e0c96b0))
+* **deps:** Replaced 'punycode' with 'punycode.js' module ([4a15157](https://github.com/nodemailer/mailparser/commit/4a15157dc9a815aa0e756d9e6ae0e8631842c447))
+* error on ks_c_5601-1987 ([89572e0](https://github.com/nodemailer/mailparser/commit/89572e000d815704378261c753f59442397b8564))
+* Fix produced text address list string according to rfc 2822 ([#340](https://github.com/nodemailer/mailparser/issues/340)) ([6bae600](https://github.com/nodemailer/mailparser/commit/6bae600a3f4a0452ee7ca43634a11939de7bcc6d))
+* handle simpleParser input stream error ([faf9fc5](https://github.com/nodemailer/mailparser/commit/faf9fc5d8a27c1f88b7a126782d84ce2fef4d4bd))
+* **punycode:** Fixes [#355](https://github.com/nodemailer/mailparser/issues/355) Deprecation warning of the punycode module ([#356](https://github.com/nodemailer/mailparser/issues/356)) ([0f35330](https://github.com/nodemailer/mailparser/commit/0f35330c87d715d38e8c853ae6c2f64d098b971d))
+* **simple-parser:** Buffer.from(string) default encode is utf-8,when input string‘s encode is gbk,result has some garbled ([633e436](https://github.com/nodemailer/mailparser/commit/633e4369c93dc5122c8c8bee0fd2b057761e1223))
+* **test:** updated test matrix (18, 20, 21) ([a2ba9c2](https://github.com/nodemailer/mailparser/commit/a2ba9c236dcd7f990c9d53a386ffaa5b564181b3))
+
+## [3.7.5](https://github.com/nodemailer/mailparser/compare/v3.7.4...v3.7.5) (2025-10-09)
+
+
+### Bug Fixes
+
+* bumped deps ([9a13f4e](https://github.com/nodemailer/mailparser/commit/9a13f4efca4b209a40f4d57d2edbd019706a82c7))
+
+## [3.7.4](https://github.com/nodemailer/mailparser/compare/v3.7.3...v3.7.4) (2025-06-29)
+
+
+### Bug Fixes
+
+* Bumped deps ([bb9c014](https://github.com/nodemailer/mailparser/commit/bb9c014c061def565183205a3ba3d269680f8271))
+* Bumped mailsplit to fix flowed parser ([da753e4](https://github.com/nodemailer/mailparser/commit/da753e45ab6d335429bbdb38c5457d04d893d05e))
+
+## [3.7.3](https://github.com/nodemailer/mailparser/compare/v3.7.2...v3.7.3) (2025-05-20)
+
+
+### Bug Fixes
+
+* Bumped deps ([9e084f9](https://github.com/nodemailer/mailparser/commit/9e084f9f265ddcfbf8ad3a3e68fc0645d4eb9d1d))
+
+## [3.7.2](https://github.com/nodemailer/mailparser/compare/v3.7.1...v3.7.2) (2024-11-29)
+
+
+### Bug Fixes
+
+* **deps:** Bumped deps to fix issue with missing whitespace ([92884d0](https://github.com/nodemailer/mailparser/commit/92884d0619efa77042ecc35fbc887e93a59e5a93))
+
+## [3.7.1](https://github.com/nodemailer/mailparser/compare/v3.7.0...v3.7.1) (2024-04-25)
+
+
+### Bug Fixes
+
+* **deps:** Replaced 'punycode' with 'punycode.js' module ([4a15157](https://github.com/nodemailer/mailparser/commit/4a15157dc9a815aa0e756d9e6ae0e8631842c447))
+
+## [3.7.0](https://github.com/nodemailer/mailparser/compare/v3.6.9...v3.7.0) (2024-04-01)
+
+
+### Features
+
+* **events:** Emit a new headerLines event to gain access the raw headers ([#364](https://github.com/nodemailer/mailparser/issues/364)) ([d33d7ec](https://github.com/nodemailer/mailparser/commit/d33d7ec4b8e32a4eb7a9a664cec5fdb545c274af))
+
+## [3.6.9](https://github.com/nodemailer/mailparser/compare/v3.6.8...v3.6.9) (2024-02-29)
+
+
+### Bug Fixes
+
+* **deps:** Bumped deps ([db842ad](https://github.com/nodemailer/mailparser/commit/db842addd36e2fe94d0c4b466da80719a36f47ac))
+
+## [3.6.8](https://github.com/nodemailer/mailparser/compare/v3.6.7...v3.6.8) (2024-02-29)
+
+
+### Bug Fixes
+
+* **punycode:** Fixes [#355](https://github.com/nodemailer/mailparser/issues/355) Deprecation warning of the punycode module ([#356](https://github.com/nodemailer/mailparser/issues/356)) ([0f35330](https://github.com/nodemailer/mailparser/commit/0f35330c87d715d38e8c853ae6c2f64d098b971d))
+
+## [3.6.7](https://github.com/nodemailer/mailparser/compare/v3.6.6...v3.6.7) (2024-02-01)
+
+
+### Bug Fixes
+
+* :arrow_up: update nodemailer dependency to resolve security issue GHSA-9h6g-pr28-7cqp ([#357](https://github.com/nodemailer/mailparser/issues/357)) ([8bc4225](https://github.com/nodemailer/mailparser/commit/8bc42251fca6f538ece599f0a5bebe09b0aeff4f))
+
+## [3.6.6](https://github.com/nodemailer/mailparser/compare/v3.6.5...v3.6.6) (2024-01-04)
+
+
+### Bug Fixes
+
+* **deploy:** added auto-deployment ([d6eb56f](https://github.com/nodemailer/mailparser/commit/d6eb56fe09fe8b415e5bbf2e53704f6788ca0fee))
+* Fix produced text address list string according to rfc 2822 ([#340](https://github.com/nodemailer/mailparser/issues/340)) ([6bae600](https://github.com/nodemailer/mailparser/commit/6bae600a3f4a0452ee7ca43634a11939de7bcc6d))
+* **test:** updated test matrix (18, 20, 21) ([a2ba9c2](https://github.com/nodemailer/mailparser/commit/a2ba9c236dcd7f990c9d53a386ffaa5b564181b3))

@@ -1,0 +1,119 @@
+{
+  "name": "peberminta",
+  "version": "0.10.0",
+  "description": "Simple, transparent parser combinators toolkit that supports any tokens",
+  "keywords": [
+    "parser",
+    "parser-combinators",
+    "parsec"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mxxii/peberminta.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mxxii/peberminta/issues"
+  },
+  "homepage": "https://github.com/mxxii/peberminta",
+  "author": "KillyMXI",
+  "funding": "https://github.com/sponsors/KillyMXI",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./lib/core.d.mts",
+        "default": "./lib/core.mjs"
+      },
+      "require": {
+        "types": "./lib/core.d.cts",
+        "default": "./lib/core.cjs"
+      }
+    },
+    "./char": {
+      "import": {
+        "types": "./lib/char.d.mts",
+        "default": "./lib/char.mjs"
+      },
+      "require": {
+        "types": "./lib/char.d.cts",
+        "default": "./lib/char.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "type": "module",
+  "main": "./lib/core.cjs",
+  "module": "./lib/core.mjs",
+  "types": "./lib/core.d.cts",
+  "files": [
+    "lib"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build:docs": "typedoc",
+    "build:deno": "denoify && rimraf --glob deno/**/*.test.ts",
+    "build:rollup": "rollup -c",
+    "build": "npm run clean && npm run build:rollup && npm run build:docs && npm run build:deno",
+    "check:all": "npm run check:tsc && npm run lint && npm test",
+    "check:tsc": "tsc --noEmit --project tsconfig.tsc.json",
+    "clean": "rimraf lib && rimraf docs && rimraf deno",
+    "example:bf1": "node --import ts-blank-space/register ./examples/bf1.ts",
+    "example:bf2": "node --import ts-blank-space/register ./examples/bf2.ts",
+    "example:calc": "node --import ts-blank-space/register ./examples/calc.ts",
+    "example:csv": "node --import ts-blank-space/register ./examples/csv.ts",
+    "example:hexColor": "node --import ts-blank-space/register ./examples/hexColor.ts",
+    "example:json-lazy": "node --import ts-blank-space/register ./examples/json-lazy.ts",
+    "example:json-formal": "node --import ts-blank-space/register ./examples/json-formal.ts",
+    "example:mckeeman": "node --import ts-blank-space/register ./examples/mckeeman-form.ts",
+    "example:nonDec": "node --import ts-blank-space/register ./examples/nonDec.ts",
+    "lint:eslint": "eslint .",
+    "lint:md": "markdownlint-cli2",
+    "lint": "npm run lint:eslint && npm run lint:md",
+    "prepublishOnly": "npm run build && npm run check:all",
+    "test:ava": "ava",
+    "test:ava-c8": "c8 ava",
+    "test": "npm run test:ava-c8"
+  },
+  "devDependencies": {
+    "@rollup/plugin-typescript": "^12.1.4",
+    "@stylistic/eslint-plugin": "^5.3.1",
+    "@tsconfig/node20": "^20.1.6",
+    "@types/node": "20.19.13",
+    "@typescript-eslint/eslint-plugin": "^8.38.0",
+    "ava": "^6.4.1",
+    "c8": "^10.1.3",
+    "denoify": "^1.6.17",
+    "eslint": "^9.34.0",
+    "eslint-plugin-jsonc": "^2.20.1",
+    "eslint-plugin-tsdoc": "^0.4.0",
+    "expect-type": "^1.2.2",
+    "leac": "^0.7.0",
+    "markdownlint-cli2": "^0.18.1",
+    "rimraf": "^6.0.1",
+    "rollup": "^4.50.0",
+    "rollup-plugin-cleanup": "^3.2.1",
+    "rollup-plugin-delete": "^3.0.1",
+    "rollup-plugin-dts": "^6.2.3",
+    "ts-blank-space": "^0.6.2",
+    "tslib": "^2.8.1",
+    "typedoc": "~0.28.12",
+    "typescript": "~5.8.3",
+    "typescript-eslint": "^8.38.0"
+  },
+  "ava": {
+    "extensions": {
+      "ts": "module"
+    },
+    "files": [
+      "test/**/*",
+      "src/**/*.test.ts"
+    ],
+    "nodeArguments": [
+      "--import=ts-blank-space/register"
+    ],
+    "verbose": true
+  },
+  "denoify": {
+    "out": "./deno"
+  }
+}

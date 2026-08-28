@@ -1,0 +1,6 @@
+node_modules
+coverage
+*.min.js
+package-lock.json
+.github
+CHANGELOG.md

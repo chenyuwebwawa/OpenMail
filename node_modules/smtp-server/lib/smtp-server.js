@@ -1,0 +1,698 @@
+'use strict';
+
+const net = require('net');
+const tls = require('tls');
+const SMTPConnection = require('./smtp-connection').SMTPConnection;
+const tlsOptions = require('./tls-options');
+const EventEmitter = require('events');
+const shared = require('nodemailer/lib/shared');
+const punycode = require('punycode.js');
+const crypto = require('crypto');
+
+const CLOSE_TIMEOUT = 30 * 1000; // how much to wait until pending connections are terminated
+
+// PROXY protocol v1 limits the header line to 107 bytes including CRLF.
+// Allow generous slack for non-conforming proxies, but never buffer
+// unbounded input from a peer that withholds the terminating newline
+const MAX_PROXY_HEADER_LENGTH = 1024;
+
+/**
+ * Creates a SMTP server instance.
+ *
+ * @constructor
+ * @param {Object} options Connection and SMTP optionsž
+ */
+class SMTPServer extends EventEmitter {
+    constructor(options) {
+        super();
+
+        this.options = options || {};
+
+        // NB! updateSecureContext() below merges the built-in key/cert and a default
+        // SNICallback into this.options, after which there is no way to tell what the
+        // operator actually supplied. Capture that now, before anything mutates it
+        let hasOwnCertificate = !!(this.options.key || this.options.cert || this.options.pfx || this.options.SNICallback || this.options.sniOptions);
+
+        // setup disabled commands list
+        this.options.disabledCommands = [].concat(this.options.disabledCommands || []).map(command => (command || '').toString().toUpperCase().trim());
+
+        this._warnAboutDefaultCertificate(hasOwnCertificate);
+
+        this.updateSecureContext();
+
+        // setup allowed auth methods
+        this.options.authMethods = [].concat(this.options.authMethods || []).map(method => (method || '').toString().toUpperCase().trim());
+
+        if (!this.options.authMethods.length) {
+            this.options.authMethods = ['LOGIN', 'PLAIN'];
+        }
+
+        // set default value for hideENHANCEDSTATUSCODES to true (disable enhanced status codes by default)
+        if (this.options.hideENHANCEDSTATUSCODES === undefined) {
+            this.options.hideENHANCEDSTATUSCODES = true;
+        }
+
+        // set default value for hideDSN to true (disable delivery status notifications by default)
+        if (this.options.hideDSN === undefined) {
+            this.options.hideDSN = true;
+        }
+
+        // set default value for hideREQUIRETLS to true (disable REQUIRETLS by default, opt-in)
+        if (this.options.hideREQUIRETLS === undefined) {
+            this.options.hideREQUIRETLS = true;
+        }
+
+        this.logger = shared.getLogger(this.options, {
+            component: this.options.component || 'smtp-server'
+        });
+
+        // apply shorthand handlers
+        ['onConnect', 'onSecure', 'onAuth', 'onMailFrom', 'onRcptTo', 'onData', 'onClose'].forEach(handler => {
+            if (typeof this.options[handler] === 'function') {
+                this[handler] = this.options[handler];
+            }
+        });
+
+        /**
+         * Timeout after close has been called until pending connections are forcibly closed
+         */
+        this._closeTimeout = false;
+
+        /**
+         * A set of all currently open connections
+         */
+        this.connections = new Set();
+
+        // setup server listener and connection handler
+        if (this.options.secure && !this.options.needsUpgrade) {
+            this.server = net.createServer(this.options, socket => {
+                this._handleProxy(socket, (err, socketOptions) => {
+                    if (err) {
+                        // PROXY header could not be read (client dropped the
+                        // connection or sent garbage). The socket is already
+                        // closing/closed and guarded against late errors in
+                        // _handleProxy; just don't proceed to connect().
+                        return;
+                    }
+                    if (this.options.secured) {
+                        return this.connect(socket, socketOptions);
+                    }
+                    this._upgrade(socket, (err, tlsSocket) => {
+                        if (err) {
+                            return this._onError(err);
+                        }
+                        this.connect(tlsSocket, socketOptions);
+                    });
+                });
+            });
+        } else {
+            this.server = net.createServer(this.options, socket =>
+                this._handleProxy(socket, (err, socketOptions) => {
+                    if (err) {
+                        // socket already closing/closed and guarded in
+                        // _handleProxy; just don't proceed to connect()
+                        return;
+                    }
+                    this.connect(socket, socketOptions);
+                })
+            );
+        }
+
+        this._setListeners();
+    }
+
+    /**
+     * The built-in certificate is only meant for testing. Its private key is
+     * published in the source tree, so anyone can intercept "encrypted" sessions
+     * that rely on it. Make sure the operator knows.
+     *
+     * Runs once from the constructor. This has to write to stderr rather than to
+     * this.logger, which does not exist yet and is a no-op unless logging was
+     * explicitly enabled, so an explicit `logger: false` is honored as an opt-out
+     *
+     * @param {Boolean} hasOwnCertificate Whether the operator supplied a certificate
+     */
+    _warnAboutDefaultCertificate(hasOwnCertificate) {
+        // a server with `secured` gets its TLS from an external terminator, and a
+        // plaintext server without STARTTLS never presents a certificate at all
+        let terminatesTls =
+            !this.options.secured && (this.options.secure || !(this.options.hideSTARTTLS || this.options.disabledCommands.includes('STARTTLS')));
+
+        if (!terminatesTls || hasOwnCertificate || this.options.logger === false) {
+            return;
+        }
+
+        console.error(
+            'WARNING: smtp-server is using the built-in default TLS certificate. ' +
+                'The private key of this certificate is publicly known, so TLS sessions are NOT secure. ' +
+                'Provide your own key/cert options in production.'
+        );
+    }
+
+    connect(socket, socketOptions) {
+        let connection = new SMTPConnection(this, socket, socketOptions);
+        this.connections.add(connection);
+        connection.on('error', err => this._onError(err));
+        connection.on('connect', data => this._onClientConnect(data));
+        connection.init();
+    }
+
+    /**
+     * Start listening on selected port and interface
+     */
+    listen(...args) {
+        return this.server.listen(...args);
+    }
+
+    /**
+     * Closes the server
+     *
+     * @param {Function} callback Callback to run once the server is fully closed
+     */
+    close(callback) {
+        let connections = this.connections.size;
+        let timeout = this.options.closeTimeout || CLOSE_TIMEOUT;
+
+        // stop accepting new connections
+        this.server.close(() => {
+            clearTimeout(this._closeTimeout);
+            if (typeof callback === 'function') {
+                return callback();
+            }
+        });
+
+        // close active connections
+        if (connections) {
+            this.logger.info(
+                {
+                    tnx: 'close'
+                },
+                'Server closing with %s pending connection%s, waiting %s seconds before terminating',
+                connections,
+                connections !== 1 ? 's' : '',
+                timeout / 1000
+            );
+        }
+
+        this._closeTimeout = setTimeout(() => {
+            connections = this.connections.size;
+            if (connections) {
+                this.logger.info(
+                    {
+                        tnx: 'close'
+                    },
+                    'Closing %s pending connection%s to close the server',
+                    connections,
+                    connections !== 1 ? 's' : ''
+                );
+
+                this.connections.forEach(connection => {
+                    connection.send(421, 'Server shutting down');
+                    connection.close();
+                });
+            }
+            if (typeof callback === 'function') {
+                const realCallback = callback;
+                callback = null;
+                return realCallback();
+            }
+        }, timeout);
+
+        // Unref timer so it doesn't prevent process exit if all connections close naturally
+        this._closeTimeout.unref();
+    }
+
+    /**
+     * Authentication handler. Override this
+     *
+     * @param {Object} auth Authentication options
+     * @param {Function} callback Callback to run once the user is authenticated
+     */
+    onAuth(auth, session, callback) {
+        if (auth.method === 'XOAUTH2') {
+            return callback(null, {
+                data: {
+                    status: '401',
+                    schemes: 'bearer mac',
+                    scope: 'https://mail.google.com/'
+                }
+            });
+        }
+
+        if (auth.method === 'XCLIENT') {
+            return callback(); // pass through
+        }
+
+        return callback(null, {
+            message: 'Authentication not implemented'
+        });
+    }
+
+    onConnect(session, callback) {
+        setImmediate(callback);
+    }
+
+    onMailFrom(address, session, callback) {
+        setImmediate(callback);
+    }
+
+    onRcptTo(address, session, callback) {
+        setImmediate(callback);
+    }
+    onSecure(socket, session, callback) {
+        setImmediate(callback);
+    }
+    onData(stream, session, callback) {
+        let chunklen = 0;
+
+        stream.on('data', chunk => {
+            chunklen += chunk.length;
+        });
+
+        stream.on('end', () => {
+            this.logger.info(
+                {
+                    tnx: 'message',
+                    size: chunklen
+                },
+                '<received %s bytes>',
+                chunklen
+            );
+            callback();
+        });
+    }
+
+    onClose(/* session */) {
+        // do nothing
+    }
+
+    updateSecureContext(options) {
+        Object.keys(options || {}).forEach(key => {
+            this.options[key] = options[key];
+        });
+
+        let defaultTlsOptions = tlsOptions(this.options);
+
+        this.secureContext = new Map();
+        this.secureContext.set('*', tls.createSecureContext(defaultTlsOptions));
+
+        let ctxMap = this.options.sniOptions || {};
+        // sniOptions is either an object or a Map with domain names as keys and TLS option objects as values
+        if (typeof ctxMap.get === 'function') {
+            ctxMap.forEach((ctx, servername) => {
+                this.secureContext.set(this._normalizeHostname(servername), tls.createSecureContext(tlsOptions(ctx)));
+            });
+        } else {
+            Object.keys(ctxMap).forEach(servername => {
+                this.secureContext.set(this._normalizeHostname(servername), tls.createSecureContext(tlsOptions(ctxMap[servername])));
+            });
+        }
+
+        if (this.options.secure) {
+            // appy changes
+
+            Object.keys(defaultTlsOptions || {}).forEach(key => {
+                if (!(key in this.options)) {
+                    this.options[key] = defaultTlsOptions[key];
+                }
+            });
+
+            // ensure SNICallback method
+            if (typeof this.options.SNICallback !== 'function') {
+                // create default SNI handler
+                this.options.SNICallback = (servername, cb) => {
+                    cb(null, this.secureContext.get(servername));
+                };
+            }
+        }
+    }
+
+    // PRIVATE METHODS
+
+    /**
+     * Setup server event handlers
+     */
+    _setListeners() {
+        let server = this.server;
+        server.once('listening', (...args) => this._onListening(...args));
+        server.once('close', (...args) => this._onClose(server, ...args));
+        server.on('error', (...args) => this._onError(...args));
+    }
+
+    /**
+     * Called when server started listening
+     *
+     * @event
+     */
+    _onListening() {
+        let address = this.server.address();
+
+        // address will be null if listener is using Unix socket
+        if (address === null) {
+            address = { address: null, port: null, family: null };
+        }
+
+        this.logger.info(
+            //
+            {
+                tnx: 'listen',
+                host: address.address,
+                port: address.port,
+                secure: !!this.options.secure,
+                protocol: this.options.lmtp ? 'LMTP' : 'SMTP'
+            },
+            '%s%s Server listening on %s:%s',
+            this.options.secure ? 'Secure ' : '',
+            this.options.lmtp ? 'LMTP' : 'SMTP',
+            address.family === 'IPv4' ? address.address : '[' + address.address + ']',
+            address.port
+        );
+    }
+
+    /**
+     * Called when server is closed
+     *
+     * @event
+     */
+    _onClose(server) {
+        this.logger.info(
+            {
+                tnx: 'closed'
+            },
+            (this.options.lmtp ? 'LMTP' : 'SMTP') + ' Server closed'
+        );
+        if (server !== this.server) {
+            // older instance was closed
+            return;
+        }
+        this.emit('close');
+    }
+
+    /**
+     * Called when an error occurs with the server
+     *
+     * @event
+     */
+    _onError(err) {
+        this.emit('error', err);
+    }
+
+    _handleProxy(socket, callback) {
+        let socketOptions = {
+            id: BigInt('0x' + crypto.randomBytes(10).toString('hex'))
+                .toString(32)
+                .padStart(16, '0')
+        };
+
+        if (
+            !this.options.useProxy ||
+            (Array.isArray(this.options.useProxy) && !this.options.useProxy.includes(socket.remoteAddress) && !this.options.useProxy.includes('*'))
+        ) {
+            socketOptions.ignore = this.options.ignoredHosts && this.options.ignoredHosts.includes(socket.remoteAddress);
+            return setImmediate(() => callback(null, socketOptions));
+        }
+
+        let chunks = [];
+        let chunklen = 0;
+        let finished = false;
+
+        let onError;
+        let onClose;
+        let onEnd;
+        let socketReader;
+
+        let cleanup = () => {
+            socket.removeListener('readable', socketReader);
+            socket.removeListener('error', onError);
+            socket.removeListener('close', onClose);
+            socket.removeListener('end', onEnd);
+        };
+
+        let done = (err, opts) => {
+            if (finished) {
+                return;
+            }
+            finished = true;
+            if (err) {
+                // The socket is already closing/closed (RST/FIN seen, or we
+                // issued socket.end() with a diagnostic). Attach a no-op 'error'
+                // handler BEFORE removing ours, so the socket is never left
+                // without one — a late in-flight error (e.g. EPIPE while
+                // flushing "* BAD") must not surface as an uncaughtException.
+                socket.on('error', () => {
+                    // ignore
+                });
+            }
+            cleanup();
+            callback(err, opts);
+        };
+
+        onError = err => {
+            // client may close the connection (RST/FIN) before sending the
+            // PROXY header; surface the error through the callback instead of
+            // letting it bubble up as an uncaught exception
+            this.logger.info(
+                {
+                    tnx: 'proxy',
+                    cid: socketOptions.id,
+                    err
+                },
+                '[%s] PROXY socket error before header was received: %s',
+                socketOptions.id,
+                err.message
+            );
+            done(err);
+        };
+
+        onClose = () => {
+            // socket closed before a full PROXY header arrived
+            done(new Error('Socket closed before PROXY header was received'));
+        };
+
+        onEnd = () => {
+            // client half-closed (FIN) before a full PROXY header arrived; with
+            // allowHalfOpen the socket emits 'end' but never 'close', so without
+            // this the connection would linger until socketTimeout
+            done(new Error('Socket ended before PROXY header was received'));
+        };
+
+        // reject a malformed/non-PROXY header: deliver the diagnostic to the
+        // client (best effort) and surface the failure through the single done()
+        let rejectInvalid = message => {
+            try {
+                socket.end('* BAD Invalid PROXY header\r\n');
+            } catch {
+                // ignore
+            }
+            return done(new Error(message || 'Invalid PROXY header'));
+        };
+
+        socketReader = () => {
+            let chunk;
+            while ((chunk = socket.read()) !== null) {
+                for (let i = 0, len = chunk.length; i < len; i++) {
+                    let chr = chunk[i];
+                    if (chr === 0x0a) {
+                        if (chunklen + i + 1 > MAX_PROXY_HEADER_LENGTH) {
+                            return rejectInvalid('PROXY header line too long');
+                        }
+                        chunks.push(chunk.slice(0, i + 1));
+                        chunklen += i + 1;
+                        let remainder = chunk.slice(i + 1);
+                        if (remainder.length) {
+                            socket.unshift(remainder);
+                        }
+
+                        let header = Buffer.concat(chunks, chunklen).toString().trim();
+
+                        let params = header.split(' ');
+                        let commandName = params.shift().toUpperCase();
+                        if (commandName !== 'PROXY') {
+                            return rejectInvalid();
+                        }
+
+                        if (params[1]) {
+                            let proxiedAddress = params[1].trim().toLowerCase();
+
+                            // The header is not authenticated in any way and the address it
+                            // carries ends up in SMTP responses, log entries and Received
+                            // headers. Anything that is not a plain IP address is malformed,
+                            // and accepting it would reopen the injection paths that the
+                            // hostname validation in SMTPConnection closes
+                            if (!net.isIP(proxiedAddress)) {
+                                return rejectInvalid('Invalid PROXY source address');
+                            }
+
+                            socketOptions.remoteAddress = proxiedAddress;
+
+                            socketOptions.ignore = this.options.ignoredHosts && this.options.ignoredHosts.includes(socketOptions.remoteAddress);
+
+                            try {
+                                if (!socketOptions.ignore) {
+                                    this.logger.info(
+                                        {
+                                            tnx: 'proxy',
+                                            cid: socketOptions.id,
+                                            proxy: socketOptions.remoteAddress
+                                        },
+                                        '[%s] PROXY from %s through %s (%s)',
+                                        socketOptions.id,
+                                        socketOptions.remoteAddress,
+                                        params[2].trim().toLowerCase(),
+                                        JSON.stringify(params)
+                                    );
+                                }
+                            } catch {
+                                return rejectInvalid();
+                            }
+
+                            if (params[3]) {
+                                socketOptions.remotePort = Number(params[3].trim()) || socketOptions.remotePort;
+                            }
+                        }
+
+                        return done(null, socketOptions);
+                    }
+                }
+                chunks.push(chunk);
+                chunklen += chunk.length;
+                if (chunklen > MAX_PROXY_HEADER_LENGTH) {
+                    return rejectInvalid('PROXY header line too long');
+                }
+            }
+        };
+        socket.on('readable', socketReader);
+        socket.on('error', onError);
+        socket.on('close', onClose);
+        socket.on('end', onEnd);
+    }
+
+    /**
+     * Called when a new connection is established. This might not be the same time the socket is opened
+     *
+     * @event
+     */
+    _onClientConnect(data) {
+        this.emit('connect', data);
+    }
+
+    /**
+     * Normalize hostname
+     *
+     * @event
+     */
+    _normalizeHostname(hostname) {
+        try {
+            hostname = punycode.toUnicode((hostname || '').toString().trim()).toLowerCase();
+        } catch (E) {
+            this.logger.error(
+                {
+                    tnx: 'punycode'
+                },
+                'Failed to process punycode domain "%s". error=%s',
+                hostname,
+                E.message
+            );
+        }
+
+        return hostname;
+    }
+
+    _upgrade(socket, callback) {
+        let socketOptions = {
+            secureContext: this.secureContext.get('*'),
+            isServer: true,
+            server: this.server,
+            SNICallback: (servername, cb) => {
+                // eslint-disable-next-line new-cap
+                this.options.SNICallback(this._normalizeHostname(servername), (err, context) => {
+                    if (err) {
+                        this.logger.error(
+                            {
+                                tnx: 'sni',
+                                servername,
+                                err
+                            },
+                            'Failed to fetch SNI context for servername %s',
+                            servername
+                        );
+                    }
+                    return cb(null, context || this.secureContext.get('*'));
+                });
+            }
+        };
+
+        let returned = false;
+        let tlsSocket;
+
+        let onError = err => {
+            if (returned) {
+                return;
+            }
+            returned = true;
+
+            const meta = {};
+            if (tlsSocket) {
+                meta.tlsProtocol = tlsSocket.getProtocol();
+            }
+            meta.protocol = 'smtp';
+            meta.stage = 'connect';
+            meta.remoteAddress = socket.remoteAddress;
+
+            if (err) {
+                err.meta = meta;
+            }
+
+            if (err && /SSL[23]*_GET_CLIENT_HELLO|ssl[23]*_read_bytes|ssl_bytes_to_cipher_list/i.test(err.message)) {
+                let message = err.message;
+                err.message = 'Failed to establish TLS session';
+                err.responseCode = 500;
+                err.code = err.code || 'TLSError';
+                meta.message = message;
+            }
+            if (!err || !err.message) {
+                err = new Error('Socket closed while initiating TLS');
+                err.responseCode = 500;
+                err.code = 'SocketError';
+                err.report = false;
+                err.meta = meta;
+            }
+
+            callback(err || new Error('Socket closed unexpectedly'));
+        };
+
+        // remove all listeners from the original socket besides the error handler
+        socket.once('error', onError);
+
+        // upgrade connection
+        tlsSocket = new tls.TLSSocket(socket, socketOptions);
+
+        tlsSocket.once('close', onError);
+        tlsSocket.once('error', onError);
+        tlsSocket.once('_tlsError', onError);
+        tlsSocket.once('clientError', onError);
+        tlsSocket.once('tlsClientError', onError);
+
+        tlsSocket.on('secure', () => {
+            socket.removeListener('error', onError);
+            tlsSocket.removeListener('close', onError);
+            tlsSocket.removeListener('error', onError);
+            tlsSocket.removeListener('_tlsError', onError);
+            tlsSocket.removeListener('clientError', onError);
+            tlsSocket.removeListener('tlsClientError', onError);
+            if (returned) {
+                try {
+                    tlsSocket.end();
+                } catch {
+                    //
+                }
+                return;
+            }
+            returned = true;
+            return callback(null, tlsSocket);
+        });
+    }
+}
+
+// Expose to the world
+module.exports.SMTPServer = SMTPServer;

@@ -1,7 +1,4 @@
-node_modules/
-data/
-files/
+node_modules/.cache
 *.log
-.env
-server-test.log
 .DS_Store
+Thumbs.db
