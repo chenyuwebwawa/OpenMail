@@ -85,7 +85,7 @@
 
 | 方式 | 命令 / 入口 | 适合 |
 | --- | --- | --- |
-| **一键脚本** | `curl -fsSL https://raw.githubusercontent.com/chenyuwebbawa/OpenMail/main/install.sh \| bash` | 全新 Linux VPS（自动装 Node 22 + 源码 + systemd + 语言包） |
+| **一键脚本** | `curl -fsSL https://raw.githubusercontent.com/chenyuwebwawa/OpenMail/main/install.sh \| bash` | 全新 Linux VPS（自动装 Node 22 + 源码 + systemd + 语言包） |
 | **Docker** | `docker compose up -d`（或下方单命令） | 有 Docker / 1Panel 的服务器 |
 | **普通服务器手动安装** | `git clone && npm install && npm start` | 开发环境、Windows（`start-windows.bat` 双击启动） |
 | **运维面板** | 宝塔面板指南 · 1Panel 指南 | 已用面板管理的服务器 |
@@ -109,7 +109,7 @@ bash install.sh --domain example.com --standard-ports --dir /opt/openmail
 ### 2. Docker 安装
 
 ```bash
-git clone https://github.com/chenyuwebbawa/OpenMail.git && cd OpenMail
+git clone https://github.com/chenyuwebwawa/OpenMail.git && cd OpenMail
 cp .env.example .env      # 设置域名 / 中继 / TLS
 docker compose up -d
 ```
@@ -122,7 +122,7 @@ docker run -d --name openmail --restart unless-stopped \
   -p 143:143 -p 993:993 -p 110:110 -p 995:995 \
   -v openmail-data:/app/data -v openmail-files:/app/files \
   -e OM_PRIMARY_DOMAIN=example.com -e OM_BASE_URL=https://mail.example.com \
-  chenyuwebbawa/openmail:latest
+  chenyuwebwawa/openmail:latest
 ```
 
 ### 3. 普通服务器 / 手动安装
@@ -130,7 +130,7 @@ docker run -d --name openmail --restart unless-stopped \
 **环境要求：** Node.js ≥ 22.5（无需编译工具链）。
 
 ```bash
-git clone https://github.com/chenyuwebbawa/OpenMail.git
+git clone https://github.com/chenyuwebwawa/OpenMail.git
 cd OpenMail
 npm install
 npm start

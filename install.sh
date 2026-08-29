@@ -3,7 +3,7 @@
 #  OpenMail 一键安装脚本（Linux 普通服务器）
 #
 #  远程一键安装:
-#    curl -fsSL https://raw.githubusercontent.com/chenyuwebbawa/OpenMail/main/install.sh | bash
+#    curl -fsSL https://raw.githubusercontent.com/chenyuwebwawa/OpenMail/main/install.sh | bash
 #  或下载后执行:
 #    bash install.sh [--domain example.com] [--dir /opt/openmail] [--port 3000] [--standard-ports]
 #
@@ -16,7 +16,7 @@
 # =============================================================
 set -euo pipefail
 
-REPO_URL="${REPO_URL:-https://github.com/chenyuwebbawa/OpenMail.git}"
+REPO_URL="${REPO_URL:-https://github.com/chenyuwebwawa/OpenMail.git}"
 INSTALL_DIR="/opt/openmail"
 SERVICE_USER="openmail"
 DOMAIN=""

@@ -87,7 +87,7 @@ OpenMail ships **four install paths** — pick one:
 
 | Method | Command / Entry | Best for |
 | --- | --- | --- |
-| **One-click script** | `curl -fsSL https://raw.githubusercontent.com/chenyuwebbawa/OpenMail/main/install.sh \| bash` | Fresh Linux VPS (installs Node 22, source, `.env`, systemd, language packs) |
+| **One-click script** | `curl -fsSL https://raw.githubusercontent.com/chenyuwebwawa/OpenMail/main/install.sh \| bash` | Fresh Linux VPS (installs Node 22, source, `.env`, systemd, language packs) |
 | **Docker** | `docker compose up -d` (or one-liner below) | Any server with Docker / 1Panel |
 | **Manual server** | `git clone && npm install && npm start` | Development, Windows (see `start-windows.bat`), custom setups |
 | **Hosting panels** | BT Panel (宝塔) guide · 1Panel guide | Existing panel-managed servers |
@@ -112,7 +112,7 @@ Flags: `--domain` (mail domain), `--standard-ports` (use 25/587/… instead of d
 ### 2. Docker
 
 ```bash
-git clone https://github.com/chenyuwebbawa/OpenMail.git && cd OpenMail
+git clone https://github.com/chenyuwebwawa/OpenMail.git && cd OpenMail
 cp .env.example .env      # set domain / relay / TLS
 docker compose up -d
 ```
@@ -125,7 +125,7 @@ docker run -d --name openmail --restart unless-stopped \
   -p 143:143 -p 993:993 -p 110:110 -p 995:995 \
   -v openmail-data:/app/data -v openmail-files:/app/files \
   -e OM_PRIMARY_DOMAIN=example.com -e OM_BASE_URL=https://mail.example.com \
-  chenyuwebbawa/openmail:latest
+  chenyuwebwawa/openmail:latest
 ```
 
 ### 3. Manual
@@ -133,7 +133,7 @@ docker run -d --name openmail --restart unless-stopped \
 **Requirements:** Node.js ≥ 22.5 (no native build tools needed).
 
 ```bash
-git clone https://github.com/chenyuwebbawa/OpenMail.git
+git clone https://github.com/chenyuwebwawa/OpenMail.git
 cd OpenMail
 npm install
 npm start

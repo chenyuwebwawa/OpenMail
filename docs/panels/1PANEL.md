@@ -10,7 +10,7 @@
 
    ```bash
    mkdir -p /opt/openmail && cd /opt/openmail
-   git clone https://github.com/chenyuwebbawa/OpenMail.git app && cd app
+   git clone https://github.com/chenyuwebwawa/OpenMail.git app && cd app
    cp .env.example .env
    nano .env
    ```
@@ -50,7 +50,7 @@
 ## 方式二：主机进程部署
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/chenyuwebbawa/OpenMail/main/install.sh) --standard-ports --domain example.com
+bash <(curl -fsSL https://raw.githubusercontent.com/chenyuwebwawa/OpenMail/main/install.sh) --standard-ports --domain example.com
 ```
 
 脚本自动完成 Node 22、源码、.env、systemd 与语言包安装。
