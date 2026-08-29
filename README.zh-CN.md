@@ -104,6 +104,12 @@ git clone https://github.com/chenyuwebwawa/OpenMail.git /opt/openmail && cd /opt
 bash install.sh --domain example.com --standard-ports --dir /opt/openmail
 ```
 
+**以后更新** —— 服务器上一条命令（自动备份数据、快照运行文件、拉取最新代码、装依赖、重启）：
+
+```bash
+cd /opt/openmail && bash scripts/update.sh      # 加 --check 只查看新版本
+```
+
 参数：`--domain`（邮件域名）、`--standard-ports`（使用 25/587 标准端口而非开发端口）、`--port`（HTTP 端口）、`--dir`（安装目录）。服务以非 root 用户经 systemd 运行（`systemctl status openmail`）。
 
 ### 2. Docker 安装
@@ -224,6 +230,7 @@ node server/setup.js list-users
 openmail/
 ├── install.sh              # 一键安装脚本（Node 22 + systemd + 语言包）
 ├── start-windows.bat       # Windows 双击启动器
+├── scripts/                # update.sh（一键更新）· doctor.sh（自检诊断）· install-langpacks.mjs · baota-adapt.sh（宝塔适配）
 ├── server/
 │   ├── index.js            # 入口：HTTP + 全部服务 + 首次初始化
 │   ├── smtp.js             # MX / Submission / SMTPS 服务
@@ -241,6 +248,7 @@ openmail/
 ├── langpacks/              # 额外语言包 + 安装清单（8 种语言）
 ├── scripts/
 │   ├── install-langpacks.mjs
+│   ├── update.sh` — 一键更新
 │   └── baota-adapt.sh      # 宝塔面板适配脚本（含宝塔邮局处置）
 ├── tests/e2e.mjs           # 98 项端到端测试（API、SMTP、IMAP、POP3、i18n、AI…）
 ├── docs/                   # DNS 指南、部署指南、面板指南、截图

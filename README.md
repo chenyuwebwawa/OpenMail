@@ -107,6 +107,12 @@ git clone https://github.com/chenyuwebwawa/OpenMail.git /opt/openmail && cd /opt
 bash install.sh --domain example.com --standard-ports --dir /opt/openmail
 ```
 
+**Updating later** — one command on the server (backs up data, snapshots runtime files, pulls the latest code, installs deps, restarts):
+
+```bash
+cd /opt/openmail && bash scripts/update.sh      # add --check to preview new commits
+```
+
 Flags: `--domain` (mail domain), `--standard-ports` (use 25/587/… instead of dev ports), `--port` (HTTP), `--dir` (install dir). The server runs as a non-root user via systemd (`systemctl status openmail`).
 
 ### 2. Docker
@@ -227,6 +233,7 @@ node server/setup.js list-users
 openmail/
 ├── install.sh              # one-click installer (Node 22 + systemd + langpacks)
 ├── start-windows.bat       # Windows double-click launcher
+├── scripts/                # update.sh (one-click updater) · doctor.sh (self-diagnosis) · install-langpacks.mjs · baota-adapt.sh (BT panel)
 ├── server/
 │   ├── index.js            # entry: HTTP + all services + first-run init
 │   ├── smtp.js             # MX / Submission / SMTPS servers
@@ -244,6 +251,7 @@ openmail/
 ├── langpacks/              # extra language packs + installer manifest (8 languages)
 ├── scripts/
 │   ├── install-langpacks.mjs
+│   ├── update.sh` — 一键更新
 │   └── baota-adapt.sh      # BT Panel (宝塔) adapter incl. BT Mail plugin handling
 ├── tests/e2e.mjs           # 98-check end-to-end suite (API, SMTP, IMAP, POP3, i18n, AI…)
 ├── docs/                   # DNS guide, deployment guide, panel guides, screenshots

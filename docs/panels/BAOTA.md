@@ -482,12 +482,25 @@ OM_RELAY_PASS=你的密码或APIKey
 
 ### 升级 OpenMail
 
+一键更新（自动：备份数据 → 快照运行数据 → 拉取最新代码 → 装依赖 → 重启）：
+
 ```bash
-cd /opt/openmail/app
+cd /opt/openmail && bash scripts/update.sh
+
+# 只查看有没有新版本，不更新：
+bash scripts/update.sh --check
+```
+
+手动更新（等价操作）：
+
+```bash
+cd /opt/openmail
 git pull
 npm install --omit=dev          # 有依赖变更时需要
 systemctl restart openmail
 ```
+
+> 更新只替换代码，`data/`（数据库）与 `files/`（附件）不受影响；数据库结构变更会在启动时自动迁移。更新后浏览器 Ctrl+F5 强制刷新。
 
 ### 备份（宝塔计划任务版）
 
