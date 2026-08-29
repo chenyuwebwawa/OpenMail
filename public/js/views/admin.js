@@ -1,5 +1,5 @@
 // 管理后台：仪表盘 / 用户 / 域名(DKIM+DNS) / 别名 / 黑名单 / 审计 / 系统设置 / 队列（i18n 已接入）
-import { API, icon, toast, esc, modal, fmtFull, fmtBytes, avatarHtml } from '../api.js';
+import { API, icon, toast, esc, modal, fmtFull, fmtBytes, avatarHtml, copyText } from '../api.js';
 import { t } from '../i18n.js';
 
 let section = 'dashboard';
@@ -267,7 +267,7 @@ async function domainsView(el) {
           </table></div>
           <p style="font-size:12px;color:var(--text-3);margin-top:12px">${t('dom.dns_tip')}</p>`;
         box.querySelectorAll('[data-copy]').forEach(c => c.addEventListener('click', () => {
-          navigator.clipboard.writeText(c.dataset.copy).then(() => toast(t('dom.copied'), 'ok'));
+          copyText(c.dataset.copy).then(() => toast(t('dom.copied'), 'ok')).catch(() => toast(t('ai.copy') + ' ✗', 'err'));
         }));
       } catch (e) { box.innerHTML = `<div class="empty-state">${icon('alert')}<div>${esc(e.message)}</div></div>`; }
     };

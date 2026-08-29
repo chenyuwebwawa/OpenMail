@@ -450,11 +450,24 @@ document.getElementById('install').addEventListener('click', (e) => {
   const btn = e.target.closest('.copy');
   if (!btn) return;
   const code = INSTALLS[+btn.dataset.codeI].code;
-  navigator.clipboard.writeText(code).then(() => {
-    const t = document.getElementById('copytoast');
-    t.classList.add('on');
-    setTimeout(() => t.classList.remove('on'), 1400);
-  });
+  const toastEl = document.getElementById('copytoast');
+  const done = () => { toastEl.classList.add('on'); setTimeout(() => toastEl.classList.remove('on'), 1400); };
+  // 兼容 HTTP 非安全上下文：优先 Clipboard API，失败回退 execCommand
+  const fallback = () => {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = code;
+      ta.style.cssText = 'position:fixed;top:-999px;left:-999px;opacity:0';
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      document.execCommand('copy');
+      ta.remove();
+      done();
+    } catch (err) { toastEl.textContent = '复制失败，请手动选择代码复制'; toastEl.classList.add('on'); setTimeout(() => { toastEl.classList.remove('on'); toastEl.textContent = '已复制到剪贴板 ✓'; }, 2000); }
+  };
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(code).then(done).catch(fallback);
+  } else fallback();
 });
 
 /* ---------- 语言墙 ---------- */

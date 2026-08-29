@@ -146,6 +146,30 @@ export function displayNameOf(m) {
 // ---------- 版权署名（全站左下角） ----------
 export const CREDIT_HTML = `<span class="footer-credit">©辰语 2026 Developed by <a href="https://jouaaaaa.top/" target="_blank" rel="noopener noreferrer">JOUaaaaa</a></span>`;
 
+// ---------- 复制文本（兼容 HTTP 非安全上下文） ----------
+export function copyText(text) {
+  return new Promise((resolve, reject) => {
+    const fallback = () => {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.cssText = 'position:fixed;top:-999px;left:-999px;opacity:0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        const ok = document.execCommand('copy');
+        ta.remove();
+        ok ? resolve() : reject(new Error('copy failed'));
+      } catch (e) { reject(e); }
+    };
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(resolve).catch(fallback);
+    } else {
+      fallback();
+    }
+  });
+}
+
 // ---------- Modal ----------
 export function modal({ title, body, footer, wide = false, onClose }) {
   const mask = document.createElement('div');
