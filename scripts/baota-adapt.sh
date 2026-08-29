@@ -76,11 +76,37 @@ fi
 # ---------- 2. 安装 OpenMail（若未装） ----------
 INSTALL_DIR="/opt/openmail"
 if [[ ! -f "${INSTALL_DIR}/server/index.js" ]]; then
-  c_info "未检测到 OpenMail，调用一键安装…"
-  bash <(curl -fsSL https://raw.githubusercontent.com/chenyuwebbawa/OpenMail/main/install.sh) \
-    ${MODE:+} $( [[ "$MODE" == "standard" ]] && echo "--standard-ports" ) --dir "${INSTALL_DIR}" || true
+  c_info "未检测到 OpenMail，开始安装…"
+  INSTALL_ARGS=(--dir "${INSTALL_DIR}")
+  [[ "$MODE" == "standard" ]] && INSTALL_ARGS+=(--standard-ports)
+
+  INSTALLED=false
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
+
+  # 1) 优先使用同仓库自带的 install.sh（git clone 之后运行本脚本的场景）
+  if [[ -f "${SCRIPT_DIR}/../install.sh" ]]; then
+    c_info "使用本地 install.sh: ${SCRIPT_DIR}/../install.sh"
+    bash "${SCRIPT_DIR}/../install.sh" "${INSTALL_ARGS[@]}" && INSTALLED=true
+  else
+    # 2) 远程获取：raw（带缓存穿透参数）→ jsDelivr 国内友好镜像
+    for U in \
+      "https://raw.githubusercontent.com/chenyuwebwawa/OpenMail/main/install.sh?_=$(date +%s)" \
+      "https://cdn.jsdelivr.net/gh/chenyuwebwawa/OpenMail@main/install.sh"; do
+      c_info "获取 install.sh: ${U%%\?*}"
+      if bash <(curl -fsSL "$U") "${INSTALL_ARGS[@]}"; then INSTALLED=true; break; fi
+      c_warn "该源获取失败，尝试下一个镜像…"
+    done
+    # 3) 兜底：直接 git clone（github.com 主站一般可达）
+    if ! $INSTALLED; then
+      c_info "退回 git clone 安装方式…"
+      rm -rf "${INSTALL_DIR}"
+      if git clone --depth 1 https://github.com/chenyuwebwawa/OpenMail.git "${INSTALL_DIR}"; then
+        (cd "${INSTALL_DIR}" && bash install.sh "${INSTALL_ARGS[@]}") && INSTALLED=true
+      fi
+    fi
+  fi
 fi
-[[ -f "${INSTALL_DIR}/server/index.js" ]] || { echo "OpenMail 未安装成功，请先运行 install.sh"; exit 1; }
+[[ -f "${INSTALL_DIR}/server/index.js" ]] || { echo "OpenMail 未安装成功。国内网络请改用："; echo "  git clone https://github.com/chenyuwebwawa/OpenMail.git /opt/openmail"; echo "  cd /opt/openmail && bash install.sh --standard-ports"; exit 1; }
 
 # 若已装但模式变了，提示改 .env
 if [[ "$MODE" == "standard" ]]; then

@@ -127,6 +127,19 @@ SSH 到服务器，**root** 执行一行：
 bash <(curl -fsSL https://raw.githubusercontent.com/chenyuwebwawa/OpenMail/main/scripts/baota-adapt.sh)
 ```
 
+> 🇨🇳 **国内网络报 404 / 超时？** 部分国内服务器访问 `raw.githubusercontent.com` 会被污染或缓存 404。任选一种替代：
+>
+> ```bash
+> # ① jsDelivr 国内友好镜像（推荐）
+> bash <(curl -fsSL https://cdn.jsdelivr.net/gh/chenyuwebwawa/OpenMail@main/scripts/baota-adapt.sh)
+>
+> # ② git clone 后用本地脚本（github.com 主站一般可达）
+> git clone https://github.com/chenyuwebwawa/OpenMail.git /opt/openmail
+> cd /opt/openmail && bash scripts/baota-adapt.sh --standard-ports
+> ```
+>
+> 新版适配脚本已内置三级回退：raw → jsDelivr 镜像 → git clone，优先使用同仓库本地脚本。
+
 脚本会自动：检测端口冲突 →（形态 A）停用残留 MTA → 安装 Node 22 → 克隆源码到 `/opt/openmail` → `npm install` → 生成 `.env` → 注册 systemd 服务 → 安装全部 10 种界面语言包 → 最后打印**管理员账号密码**和下一步操作清单。
 
 想要交互少一点，可以带参数直接跑：

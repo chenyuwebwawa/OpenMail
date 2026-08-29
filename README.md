@@ -97,7 +97,11 @@ OpenMail ships **four install paths** — pick one:
 ```bash
 # Interactive: prompts for domain, generates .env, registers a systemd service,
 # installs all 10 UI language packs and prints the admin password.
-curl -fsSL https://raw.githubusercontent.com/chenyuwebbawa/OpenMail/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/chenyuwebwawa/OpenMail/main/install.sh | bash
+
+# Behind a network that blocks raw.githubusercontent (e.g. mainland China)? Any of:
+curl -fsSL https://cdn.jsdelivr.net/gh/chenyuwebwawa/OpenMail@main/install.sh | bash
+git clone https://github.com/chenyuwebwawa/OpenMail.git /opt/openmail && cd /opt/openmail && bash install.sh
 
 # Non-interactive with options:
 bash install.sh --domain example.com --standard-ports --dir /opt/openmail

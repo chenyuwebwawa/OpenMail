@@ -94,7 +94,11 @@
 
 ```bash
 # 交互式：询问域名、生成 .env、注册 systemd 服务、安装 10 语言包并打印管理员密码
-curl -fsSL https://raw.githubusercontent.com/chenyuwebbawa/OpenMail/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/chenyuwebwawa/OpenMail/main/install.sh | bash
+
+# 国内网络 404/超时时，任选其一：
+curl -fsSL https://cdn.jsdelivr.net/gh/chenyuwebwawa/OpenMail@main/install.sh | bash
+git clone https://github.com/chenyuwebwawa/OpenMail.git /opt/openmail && cd /opt/openmail && bash install.sh
 
 # 非交互带参数:
 bash install.sh --domain example.com --standard-ports --dir /opt/openmail
