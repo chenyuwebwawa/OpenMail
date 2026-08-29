@@ -512,6 +512,14 @@ async function sysView(el) {
       <div id="ss-test-out" style="font-size:12px;color:var(--text-3);margin-top:10px"></div>
     </div></div>
 
+    <div class="card" style="margin-top:16px"><div class="card-head"><h3>${t('sys.logs')}</h3>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-sm" id="ss-logs-view">${t('sys.logs_view')}</button>
+        <button class="btn btn-sm" id="ss-logs-dl">${icon('download')} ${t('sys.logs_dl')}</button>
+      </div></div><div class="card-body" style="padding-top:6px">
+      <div id="ss-logs-out"></div>
+    </div></div>
+
     <div class="card" style="margin-top:16px"><div class="card-head"><h3>${t('sys.backup')}</h3></div><div class="card-body">
       <div class="kv-row">
         <div><div class="k">${t('sys.backup_btn')}</div><div class="d">${t('sys.backup_d')}</div></div>
@@ -537,5 +545,22 @@ async function sysView(el) {
   });
   el.querySelector('#ss-backup').addEventListener('click', () => {
     window.open('/api/admin/backup');
+  });
+
+  // 日志查看/下载
+  el.querySelector('#ss-logs-dl').addEventListener('click', () => window.open('/api/admin/logs/download'));
+  el.querySelector('#ss-logs-view').addEventListener('click', async () => {
+    const out = el.querySelector('#ss-logs-out');
+    out.innerHTML = '<div class="spinner"></div>';
+    try {
+      const r = await API.get('/admin/logs');
+      const m = modal({
+        title: `${t('sys.logs')} — ${r.file || t('common.none')}`,
+        wide: true,
+        body: `<pre style="background:var(--ink);color:#d7e2ff;padding:14px 16px;border-radius:9px;max-height:60vh;overflow:auto;font-size:12px;line-height:1.7;white-space:pre-wrap;word-break:break-all">${esc(r.lines.join('\n'))}</pre>`,
+        footer: `<button class="btn" data-close>${t('dom.close')}</button>`,
+      });
+      out.innerHTML = `${t('sys.logs_view')} ✓ (${r.lines.length} 行)`;
+    } catch (e) { out.textContent = '✗ ' + e.message; }
   });
 }

@@ -374,9 +374,16 @@ textarea.input { resize: vertical; min-height: 70px; }
 
 /* ---------- 底部标签栏（移动端，参考手机邮箱 App） ---------- */
 .app-tabbar { display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 90; background: var(--bg-panel); border-top: 1px solid var(--border); padding-bottom: env(safe-area-inset-bottom); }
-.app-tabbar button { flex: 1; background: none; border: none; padding: 8px 0 6px; color: var(--text-3); font-size: 11px; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; }
-.app-tabbar button svg { width: 20px; height: 20px; }
-.app-tabbar button.active { color: var(--primary); font-weight: 600; }
+.app-tabbar button { position: relative; flex: 1; background: none; border: none; padding: 9px 0 7px; color: var(--text-3); font-size: 12px; font-weight: 500; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; }
+.app-tabbar button svg { width: 22px; height: 22px; }
+.app-tabbar button.active { color: var(--primary); font-weight: 700; }
+.app-tabbar button.active::before { content: ''; position: absolute; top: 0; left: 28%; right: 28%; height: 3px; border-radius: 0 0 4px 4px; background: var(--primary); }
+.app-tabbar button .uc-dot { display: none; }
+.app-tabbar button .uc-dot.on { display: block; position: absolute; top: 4px; right: calc(50% - 19px); min-width: 16px; height: 16px; border-radius: 9px; background: var(--danger); color: #fff; font-size: 10px; font-weight: 700; line-height: 16px; text-align: center; padding: 0 4px; }
+.compose-fab { display: none; position: absolute; right: 18px; bottom: 76px; z-index: 25; width: 56px; height: 56px; border-radius: 50%; border: none; background: var(--primary); color: #fff; box-shadow: 0 6px 20px rgba(79,110,247,.45); cursor: pointer; align-items: center; justify-content: center; transition: transform .15s; }
+.compose-fab svg { width: 26px; height: 26px; }
+.compose-fab:active { transform: scale(.92); }
+.bl { display: none; }
 .m-back { display: none !important; }
 .m-folders { display: none !important; }
 
@@ -385,7 +392,18 @@ textarea.input { resize: vertical; min-height: 70px; }
   .app-shell { flex-direction: column; }
   .app-nav { display: none; }
   .app-tabbar { display: flex; }
-  .app-main { padding-bottom: 58px; }
+  .app-main { padding-bottom: 62px; }
+  body { font-size: 15px; }
+  .compose-fab { display: flex; }
+  #compose-btn { display: none; }
+  .read-toolbar .bl { display: inline; }
+  .read-toolbar .btn { padding: 8px 11px; flex-shrink: 0; }
+  .read-toolbar { padding: 9px 12px; }
+  .msg-item { padding: 13px 14px; gap: 11px; }
+  .m-subject { font-size: 14px; color: var(--text); margin-top: 4px; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .m-snip { display: none; }
+  .m-from { font-size: 14.5px; }
+  .mail-layout.folder-open::after { content: ''; position: absolute; inset: 0; z-index: 35; background: rgba(10,14,28,.35); }
   .mail-layout { position: relative; overflow: hidden; }
   .list-pane { width: 100%; border-right: none; }
   .read-pane { display: none; position: absolute; inset: 0; z-index: 20; background: var(--bg); }

@@ -464,5 +464,8 @@
   "dom.check_running": "Checking DNS…",
   "dom.check_missing_hint": "These records are not live yet — external mail may fail to arrive:",
   "dom.check_missing_tip": "Add/fix them at your DNS provider, wait a few minutes, then run the check again. New records usually take 5-30 minutes to propagate.",
-  "dom.check_note": "Checks run from the server itself; whether outside servers can reach port 25 also depends on your cloud security group/firewall."
+  "dom.check_note": "Checks run from the server itself; whether outside servers can reach port 25 also depends on your cloud security group/firewall.",
+  "sys.logs": "Runtime logs",
+  "sys.logs_view": "View recent logs",
+  "sys.logs_dl": "Download log file"
 }

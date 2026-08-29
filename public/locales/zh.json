@@ -464,5 +464,8 @@
   "dom.check_running": "正在检测解析…",
   "dom.check_missing_hint": "以下记录未生效，外部邮件可能无法送达：",
   "dom.check_missing_tip": "请到 DNS 服务商添加/修正后等待几分钟再重新检测。新记录全球生效一般需要 5-30 分钟。",
-  "dom.check_note": "检测在服务器本机执行；外部能否连入 25 端口还取决于云安全组/防火墙的放行。"
+  "dom.check_note": "检测在服务器本机执行；外部能否连入 25 端口还取决于云安全组/防火墙的放行。",
+  "sys.logs": "运行日志",
+  "sys.logs_view": "查看最近日志",
+  "sys.logs_dl": "下载日志文件"
 }

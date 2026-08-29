@@ -1,4 +1,5 @@
 // OpenMail 入口：HTTP API + Webmail 静态资源 + SMTP/IMAP/POP3 + 调度器
+import './util/logfile.js';   // 必须最先导入：捕获全部日志到文件
 import express from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -84,13 +85,14 @@ app.use('/api', langRoutes);
 app.use('/api', templateRoutes);
 app.use('/api', aiRoutes);
 
-// 静态资源 + 双前端路由：/ 为交互式官网，/app 为 Webmail 邮件客户端
+// 静态资源 + 双前端路由：/ 为邮箱客户端（直达），/home 为产品官网
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.resolve(__dirname, '..', 'public');
 app.use(express.static(publicDir, { index: false }));
-app.get('/', (req, res) => res.sendFile(path.join(publicDir, 'site', 'index.html')));
+app.get('/', (req, res) => res.sendFile(path.join(publicDir, 'index.html')));
+app.get(['/home', '/home/'], (req, res) => res.sendFile(path.join(publicDir, 'site', 'index.html')));
 app.get(/^\/app($|\/)/, (req, res) => res.sendFile(path.join(publicDir, 'index.html')));
-app.get(/^\/(?!api\/).*/, (req, res) => res.sendFile(path.join(publicDir, 'site', 'index.html')));
+app.get(/^\/(?!api\/).*/, (req, res) => res.sendFile(path.join(publicDir, 'index.html')));
 
 // 错误处理
 app.use((err, req, res, next) => {

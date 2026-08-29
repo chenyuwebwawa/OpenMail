@@ -325,6 +325,29 @@ router.get('/admin/audit', (req, res) => {
   res.json({ logs, total, page, pageSize });
 });
 
+// ---------- 日志文件 ----------
+router.get('/admin/logs', (req, res) => {
+  const dir = path.join(config.dataDir, 'logs');
+  try {
+    const files = fs.readdirSync(dir).filter(f => f.endsWith('.log')).sort();
+    if (!files.length) return res.json({ file: '', lines: ['（暂无日志文件）'] });
+    const latest = files[files.length - 1];
+    const content = fs.readFileSync(path.join(dir, latest), 'utf8');
+    res.json({ file: latest, lines: content.split(/\r?\n/).slice(-400) });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+router.get('/admin/logs/download', (req, res) => {
+  const dir = path.join(config.dataDir, 'logs');
+  try {
+    const files = fs.readdirSync(dir).filter(f => f.endsWith('.log')).sort();
+    if (!files.length) return res.status(404).json({ error: '暂无日志文件' });
+    const latest = files[files.length - 1];
+    audit(null, 'admin', 'admin.logs_download', latest);
+    res.download(path.join(dir, latest), latest);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ---------- 系统设置 ----------
 router.get('/admin/settings', (req, res) => {
   res.json({

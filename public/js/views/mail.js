@@ -85,7 +85,7 @@ function renderFolders() {
       ${f.type === 'drafts' && f.total > 0 ? `<span class="badge">${f.total}</span>` : ''}
     </div>`;
   pane.innerHTML = `
-    <div class="folder-head"><span>${t('mail.folders')}</span><button class="btn btn-ghost btn-icon btn-sm" id="new-folder" title="${t('mail.new_folder')}">${icon('plus')}</button></div>
+    <div class="folder-head"><span>${t('mail.folders')}</span><span style="display:flex;gap:4px"><button class="btn btn-ghost btn-icon btn-sm" id="new-folder" title="${t('mail.new_folder')}">${icon('plus')}</button><button class="btn btn-ghost btn-icon btn-sm m-back" id="m-close-folders" title="${t('contacts.cancel')}">${icon('x')}</button></span></div>
     <div class="folder-list">
       ${sys.map(item).join('')}
       ${custom.length ? `<div class="folder-sep"></div>${custom.map(item).join('')}` : ''}
@@ -126,6 +126,7 @@ function renderFolders() {
       loadFolders();
     });
   });
+  pane.querySelector('#m-close-folders').addEventListener('click', () => document.getElementById('mail-layout')?.classList.remove('folder-open'));
   pane.querySelector('#new-folder').addEventListener('click', () => {
     const name = prompt(t('prompt.folder_name'));
     if (!name || !name.trim()) return;
@@ -193,6 +194,7 @@ function renderList() {
     <div class="msg-list" id="msg-list">
       ${state.messages.length ? state.messages.map(rowHtml).join('') : emptyHtml()}
     </div>
+    <button class="compose-fab" id="compose-fab" title="${t('mail.compose')}">${icon('plus')}</button>
     <div class="list-foot">
       <span>${t('mail.count', { n: state.total })}</span>
       <span style="display:flex;gap:6px">
@@ -204,6 +206,7 @@ function renderList() {
   // 事件
   pane.querySelector('#refresh').addEventListener('click', () => loadMessages());
   pane.querySelector('#compose-btn').addEventListener('click', () => openCompose({ mode: 'new' }));
+  pane.querySelector('#compose-fab').addEventListener('click', () => openCompose({ mode: 'new' }));
   pane.querySelector('#m-folders').addEventListener('click', () => document.getElementById('mail-layout')?.classList.toggle('folder-open'));
   const si = pane.querySelector('#search-input');
   let deb;
@@ -381,10 +384,10 @@ function renderRead() {
         <button class="btn btn-sm" id="a-forward">${icon('forward')} ${t('mail.forward')}</button>
         <div class="sep" style="width:1px;height:18px;background:var(--border)"></div>
         <button class="btn btn-sm" id="a-ai" style="border-color:var(--primary);color:var(--primary)">${icon('key')} ${t('ai.composer_btn')}</button>
-        <button class="btn btn-sm btn-icon" id="a-star" title="${t('mail.star')}">${icon('star')}</button>
-        <button class="btn btn-sm btn-icon" id="a-unread" title="${t('mail.mark_unread')}">${icon('check')}</button>
-        <button class="btn btn-sm btn-icon" id="a-archive" title="${t('mail.archive')}">${icon('archive')}</button>
-        <button class="btn btn-sm btn-icon" id="a-trash" title="${t('mail.delete')}">${icon('trash')}</button>
+        <button class="btn btn-sm btn-icon" id="a-star" title="${t('mail.star')}"><span class="bl">${t('mail.star')}</span>${icon('star')}</button>
+        <button class="btn btn-sm btn-icon" id="a-unread" title="${t('mail.mark_unread')}"><span class="bl">${t('mail.unread')}</span>${icon('check')}</button>
+        <button class="btn btn-sm btn-icon" id="a-archive" title="${t('mail.archive')}"><span class="bl">${t('mail.archive')}</span>${icon('archive')}</button>
+        <button class="btn btn-sm btn-icon" id="a-trash" title="${t('mail.delete')}"><span class="bl">${t('mail.delete')}</span>${icon('trash')}</button>
       `}
       <span style="flex:1"></span>
       <span style="font-size:11.5px;color:var(--text-3)" title="auth">${esc(m.auth_results || '')}</span>
