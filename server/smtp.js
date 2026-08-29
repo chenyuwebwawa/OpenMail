@@ -43,7 +43,7 @@ async function handleData(stream, session, callback) {
     if (size > config.smtpMaxSize) { tooBig = true; continue; }
     chunks.push(chunk);
   }
-  if (tooBig) return callback(new Error('邮件超过大小限制'));
+  if (tooBig) { console.error(`[smtp] 拒收: 邮件超过大小限制 from=${session.remoteAddress} (${size}B)`); return callback(new Error('邮件超过大小限制')); }
   const raw = Buffer.concat(chunks);
   const remoteIp = session.remoteAddress;
   const rcpts = session.envelope.rcptTo.map(r => r.address);
@@ -87,8 +87,14 @@ async function handleData(stream, session, callback) {
     } else {
       // MX 收信
       const { results } = await processInbound({ sender, rcptTo: rcpts, raw, remoteIp, helo: session.clientHostname });
-      const allRejected = results.length > 0 && results.every(r => !r.ok);
-      if (allRejected) return callback(new Error('投递失败: ' + results.map(r => r.reason).join('; ')));
+      const failed = results.filter(r => !r.ok);
+      if (failed.length) {
+        console.error(`[smtp] 入站投递失败 from=${sender}: ${JSON.stringify(failed).slice(0, 300)}`);
+        const allRejected = results.every(r => !r.ok);
+        if (allRejected) return callback(new Error('投递失败: ' + failed.map(r => r.reason).join('; ')));
+      }
+      const delivered = results.filter(r => r.ok);
+      if (delivered.length) console.log(`[smtp] 已收下 from=${sender} to=[${delivered.map(r => r.rcpt).join(',')}] score=${delivered[0].score?.toFixed(1) ?? '?'}`);
       callback();
     }
   } catch (err) {
@@ -127,34 +133,39 @@ export function startSMTPServers() {
   });
 
   // ---- 端口 587 / 465：Submission，必须认证 ----
-  const submissionHandler = (isImplicitTls) => new SMTPServer({
-    ...tls,
-    secure: isImplicitTls,
-    banner: `${config.siteName} Submission ready`,
-    size: config.smtpMaxSize,
-    allowInsecureAuth: true, // 开发环境自签证书时允许明文认证；生产建议启用外部 TLS 后关闭
-    onAuth(auth, session, cb) {
-      const username = String(auth.username || '').toLowerCase().trim();
-      const fullAddr = username.includes('@') ? username : `${username}@${config.primaryDomain}`;
-      const user = q.get('SELECT * FROM users WHERE address = ? OR address = ?', fullAddr, username);
-      if (!user || user.status === 'banned') return cb(new Error('认证失败：用户不存在或已禁用'));
-      bcrypt.compare(String(auth.password || ''), user.password_hash).then(match => {
-        if (!match) return cb(new Error('认证失败：密码错误'));
-        cb(null, { user });
-      });
-    },
-    onRcptTo(address, session, cb) {
-      if (!session.user) return cb(new Error('需要认证'));
-      if (rateLimited(session.remoteAddress)) return cb(new Error('发送频率超限，请稍后再试'));
-      cb();
-    },
-    onData(stream, session, cb) {
-      session.isSubmission = true;
-      handleData(stream, session, cb);
-    },
-  });
+  const submissionHandler = (isImplicitTls) => {
+    const srv = new SMTPServer({
+      ...tls,
+      secure: isImplicitTls,
+      banner: `${config.siteName} Submission ready`,
+      size: config.smtpMaxSize,
+      allowInsecureAuth: true, // 开发环境自签证书时允许明文认证；生产建议启用外部 TLS 后关闭
+      onAuth(auth, session, cb) {
+        const username = String(auth.username || '').toLowerCase().trim();
+        const fullAddr = username.includes('@') ? username : `${username}@${config.primaryDomain}`;
+        const user = q.get('SELECT * FROM users WHERE address = ? OR address = ?', fullAddr, username);
+        if (!user || user.status === 'banned') return cb(new Error('认证失败：用户不存在或已禁用'));
+        bcrypt.compare(String(auth.password || ''), user.password_hash).then(match => {
+          if (!match) return cb(new Error('认证失败：密码错误'));
+          cb(null, { user });
+        });
+      },
+      onRcptTo(address, session, cb) {
+        if (!session.user) return cb(new Error('需要认证'));
+        if (rateLimited(session.remoteAddress)) return cb(new Error('发送频率超限，请稍后再试'));
+        cb();
+      },
+      onData(stream, session, cb) {
+        session.isSubmission = true;
+        handleData(stream, session, cb);
+      },
+    });
+    srv.on('error', (err) => console.error('[smtp] Submission 服务错误:', err.message));
+    return srv;
+  };
 
   const servers = [];
+  mx.on('error', (err) => console.error('[smtp] MX 服务错误:', err.message));
   try {
     mx.listen(config.smtpPort, () => console.log(`[smtp] MX 收信端口 :${config.smtpPort} (生产 25)`));
     servers.push(mx);
@@ -162,6 +173,7 @@ export function startSMTPServers() {
 
   try {
     const sub = submissionHandler(false);
+    sub.on('error', (err) => console.error('[smtp] Submission 服务错误:', err.message));
     sub.listen(config.submissionPort, () => console.log(`[smtp] Submission 端口 :${config.submissionPort} (生产 587, SASL)`));
     servers.push(sub);
   } catch (e) { console.error('[smtp] Submission 监听失败:', e.message); }
@@ -169,6 +181,7 @@ export function startSMTPServers() {
   if (tls.cert) {
     try {
       const smtps = submissionHandler(true);
+      smtps.on('error', (err) => console.error('[smtp] SMTPS 服务错误:', err.message));
       smtps.listen(config.smtpsPort, () => console.log(`[smtp] SMTPS 端口 :${config.smtpsPort} (生产 465, 隐式 TLS)`));
       servers.push(smtps);
     } catch (e) { console.error('[smtp] SMTPS 监听失败:', e.message); }
