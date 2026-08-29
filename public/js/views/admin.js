@@ -243,7 +243,7 @@ async function domainsView(el) {
       wide: true,
       body: `
         <div class="field" style="max-width:320px"><label>${t('dom.dns_ip')}</label>
-          <input class="input" id="dns-ip" value="203.0.113.10" placeholder="${t('dom.ip_ph')}"></div>
+          <input class="input" id="dns-ip" value="" placeholder="${t('dom.ip_ph')}"></div>
         <div id="dns-records"><div class="spinner"></div></div>`,
       footer: `<button class="btn" data-close>${t('dom.close')}</button>`,
     });
@@ -272,7 +272,11 @@ async function domainsView(el) {
       } catch (e) { box.innerHTML = `<div class="empty-state">${icon('alert')}<div>${esc(e.message)}</div></div>`; }
     };
     dnsModal.el.querySelector('#dns-ip').addEventListener('change', loadDns);
-    loadDns();
+    // 自动探测服务器公网出口 IP 预填（NAT/多线路环境探测值可能不准，可手动修改后回车刷新）
+    API.get('/admin/myip').then(({ ip }) => {
+      if (ip) dnsModal.el.querySelector('#dns-ip').value = ip;
+      loadDns();
+    }).catch(loadDns);
   }));
 
   el.querySelectorAll('[data-catch]').forEach(b => b.addEventListener('click', () => {

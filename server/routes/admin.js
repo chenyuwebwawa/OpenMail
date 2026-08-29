@@ -16,6 +16,22 @@ const guard = (req, res, next) => requireAuth('admin')(req, res, next);
 router.use('/admin', guard);
 
 // ---------- 仪表盘 ----------
+// 探测服务器公网出口 IP（用于 DNS 记录示例预填；NAT 场景可能不准，允许手动修改）
+router.get('/admin/myip', async (req, res) => {
+  const services = ['https://api.ipify.org', 'https://ifconfig.me/ip', 'https://ipecho.net/plain'];
+  for (const s of services) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 4000);
+      const r = await fetch(s, { signal: controller.signal });
+      clearTimeout(timer);
+      const ip = (await r.text()).trim();
+      if (/^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) return res.json({ ip });
+    } catch {}
+  }
+  res.json({ ip: '' });
+});
+
 router.get('/admin/stats', (req, res) => {
   const users = q.get('SELECT COUNT(*) AS c FROM users').c;
   const domains = q.get('SELECT COUNT(*) AS c FROM domains').c;
