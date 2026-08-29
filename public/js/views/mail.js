@@ -94,6 +94,7 @@ function renderFolders() {
   pane.querySelectorAll('.folder-item').forEach(el => {
     el.addEventListener('click', (e) => {
       if (e.target.closest('[data-del]')) return;
+      document.getElementById('mail-layout')?.classList.remove('folder-open');
       switchFolder(parseInt(el.dataset.fid));
     });
     el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('drop-target'); });
@@ -177,6 +178,7 @@ function renderList() {
   pane.innerHTML = `
     <div class="list-toolbar">
       <div class="row">
+        <button class="btn btn-icon btn-ghost m-folders" id="m-folders" title="${t('mail.folders')}">${icon('folder')}</button>
         <button class="btn btn-primary" id="compose-btn" style="flex-shrink:0" title="${title}">${icon('plus')} ${t('mail.compose')}</button>
         <div class="search-box">${icon('search')}<input class="input" id="search-input" placeholder="${t('mail.search')}" value="${esc(state.search)}"></div>
         <button class="btn btn-icon btn-ghost" id="refresh" title="${t('admin.refresh')}">${icon('refresh')}</button>
@@ -202,6 +204,7 @@ function renderList() {
   // 事件
   pane.querySelector('#refresh').addEventListener('click', () => loadMessages());
   pane.querySelector('#compose-btn').addEventListener('click', () => openCompose({ mode: 'new' }));
+  pane.querySelector('#m-folders').addEventListener('click', () => document.getElementById('mail-layout')?.classList.toggle('folder-open'));
   const si = pane.querySelector('#search-input');
   let deb;
   si.addEventListener('input', () => {
@@ -318,12 +321,19 @@ async function openMessage(id, peek = false) {
   try {
     const r = await API.get(`/messages/${id}${peek ? '?peek=1' : ''}`);
     state.current = r.message;
+    if (window.matchMedia('(max-width: 768px)').matches) {
+      document.getElementById('mail-layout')?.classList.add('reading');
+    }
     if (!state.search) {
       const m = state.messages.find(x => x.id === id);
       if (m && !m.is_read) { m.is_read = 1; renderList(); loadFolders(); }
     }
     renderRead();
   } catch (e) { toast(e.message, 'err'); }
+}
+
+function closeMobileRead() {
+  document.getElementById('mail-layout')?.classList.remove('reading');
 }
 
 function sanitizeHtml(html) {
@@ -360,6 +370,7 @@ function renderRead() {
 
   pane.innerHTML = `
     <div class="read-toolbar">
+      <button class="btn btn-sm btn-icon m-back" id="a-back" title="${t('mail.pick')}">${icon('arrowleft')}</button>
       ${isDraft ? `
         <button class="btn btn-primary btn-sm" id="a-edit">${icon('draft')} ${t('compose.title_draft')}</button>
         ${scheduled ? `<span class="badge badge-blue">${icon('clock')} ${t('mail.scheduled', { time: fmtFull(m.scheduled_at) })}</span>` : ''}
@@ -436,6 +447,11 @@ function renderRead() {
   if (edit) {
     edit.addEventListener('click', () => openCompose({ mode: 'draft', msg: m }));
   }
+  pane.querySelector('#a-back').addEventListener('click', () => {
+    closeMobileRead();
+    state.current = null;
+    renderRead();
+  });
 }
 
 // ---------- 阅读视图 AI（分析 / 翻译） ----------

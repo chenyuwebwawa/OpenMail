@@ -371,6 +371,64 @@ textarea.input { resize: vertical; min-height: 70px; }
 [data-theme="dark"] .auth-credit .footer-credit { color: #6b7590; }
 [data-theme="dark"] .auth-credit .footer-credit a { color: #a2abc4; }
 
+/* ---------- 底部标签栏（移动端，参考手机邮箱 App） ---------- */
+.app-tabbar { display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 90; background: var(--bg-panel); border-top: 1px solid var(--border); padding-bottom: env(safe-area-inset-bottom); }
+.app-tabbar button { flex: 1; background: none; border: none; padding: 8px 0 6px; color: var(--text-3); font-size: 11px; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; }
+.app-tabbar button svg { width: 20px; height: 20px; }
+.app-tabbar button.active { color: var(--primary); font-weight: 600; }
+.m-back { display: none !important; }
+.m-folders { display: none !important; }
+
+/* ---------- 移动端适配（≤768px：单栏 + 底部标签栏） ---------- */
+@media (max-width: 768px) {
+  .app-shell { flex-direction: column; }
+  .app-nav { display: none; }
+  .app-tabbar { display: flex; }
+  .app-main { padding-bottom: 58px; }
+  .mail-layout { position: relative; overflow: hidden; }
+  .list-pane { width: 100%; border-right: none; }
+  .read-pane { display: none; position: absolute; inset: 0; z-index: 20; background: var(--bg); }
+  .mail-layout.reading .read-pane { display: flex; }
+  .mail-layout.reading .list-pane { display: none; }
+  .m-back { display: inline-flex !important; }
+  .m-folders { display: inline-flex !important; }
+  .folder-pane { position: absolute; z-index: 40; top: 0; bottom: 0; left: 0; width: 250px; transform: translateX(-105%); transition: transform .22s ease; box-shadow: var(--shadow-lg); }
+  .mail-layout.folder-open .folder-pane { transform: none; }
+  .list-toolbar { padding: 8px; gap: 7px; }
+  .list-toolbar .row { flex-wrap: nowrap; }
+  #compose-btn { padding: 8px 12px; font-size: 13px; }
+  .batch-bar { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px; }
+  .read-toolbar { overflow-x: auto; flex-wrap: nowrap; }
+  .read-body { padding: 14px; }
+  .read-head { padding: 13px 15px; }
+  .read-content { padding: 15px 16px; }
+  .page { padding: 14px; }
+  .page-head h2 { font-size: 17px; }
+  .settings-grid { flex-direction: column; gap: 12px; }
+  .settings-nav { width: 100%; flex-direction: row; overflow-x: auto; gap: 6px; padding-bottom: 2px; }
+  .settings-nav button { white-space: nowrap; padding: 8px 13px; border: 1px solid var(--border); border-radius: 9px; }
+  .settings-nav button.active { border-color: var(--primary); }
+  .modal { max-width: 100vw !important; border-radius: 0; height: 100dvh; max-height: 100dvh; }
+  .modal-mask { padding: 0; }
+  .modal.wide { max-width: 100vw !important; }
+  .editor-area { min-height: 160px; }
+  .compose-foot { padding: 10px 12px; gap: 6px; }
+  .compose-foot .btn { padding: 8px 12px; font-size: 13px; }
+  .stat-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat-card { padding: 13px 14px; }
+  .stat-card .value { font-size: 20px; }
+  .table { font-size: 12.5px; }
+  .ctable { font-size: 12.5px; }
+  .contact-item { flex-wrap: wrap; }
+  .kv-row { flex-wrap: wrap; }
+  .hero-cta .btn, .bigcta .btn { width: 100%; justify-content: center; }
+  .hero-stats { flex-wrap: wrap; max-width: 92%; }
+  .hstat { flex: 1 1 44%; border-bottom: 1px solid var(--border); }
+  .install { padding: 34px 18px; border-radius: 16px; }
+  .foot-inner { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .foot-links { margin-left: 0; }
+}
+
 /* 滚动条 */
 ::-webkit-scrollbar { width: 9px; height: 9px; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; border: 2px solid transparent; background-clip: content-box; }

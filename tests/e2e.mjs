@@ -382,6 +382,10 @@ async function main() {
       dns.json.records?.length === 6 &&
       dns.json.records.some(r => r.type.includes('DKIM') && r.value.includes('v=DKIM1')) &&
       dns.json.records.some(r => r.type === 'MX'), JSON.stringify(dns.json.records?.map(r => r.type)));
+    const chk = await api('GET', `/api/admin/domains/${domId}/check?ip=1.2.3.4`, { token: tokAdmin });
+    ok('DNS 一键检测接口（A/MX/SPF/DKIM/DMARC/PTR/SMTP监听）',
+      chk.status === 200 && Array.isArray(chk.json.results) && chk.json.results.length >= 7 && chk.json.results.some(r => r.name.includes('SMTP')),
+      JSON.stringify(chk.json.results?.map(r => `${r.name}:${r.ok ? 'ok' : 'miss'}`)));
     const aliasRes = await api('POST', '/api/admin/aliases', { token: tokAdmin, body: { source: 'info@test-domain.com', destination: 'alice@localhost' } });
     ok('创建别名', aliasRes.status === 200 || aliasRes.status === 409);
     // 别名投递测试（用独立发件域名，避免与前面创建的过滤规则/黑名单相互影响）

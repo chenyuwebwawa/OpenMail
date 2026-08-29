@@ -451,5 +451,18 @@
   "tpl.source_manual": "manual",
   "tpl.source_import": "imported",
   "tpl.source_ai": "AI",
-  "tpl.source": "Source"
+  "tpl.source": "Source",
+  "dom.check_btn": "Check DNS",
+  "dom.check_allok": "All DNS records are live ✓",
+  "dom.check_missing": "{n} record(s) not live or abnormal",
+  "dom.check_click": "Click to view details",
+  "dom.check_item": "Check item",
+  "dom.check_expect": "Expected",
+  "dom.check_found": "Resolved",
+  "dom.check_okrec": "Live",
+  "dom.check_missingrec": "Not live",
+  "dom.check_running": "Checking DNS…",
+  "dom.check_missing_hint": "These records are not live yet — external mail may fail to arrive:",
+  "dom.check_missing_tip": "Add/fix them at your DNS provider, wait a few minutes, then run the check again. New records usually take 5-30 minutes to propagate.",
+  "dom.check_note": "Checks run from the server itself; whether outside servers can reach port 25 also depends on your cloud security group/firewall."
 }

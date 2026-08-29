@@ -271,6 +271,54 @@ async function domainsView(el) {
         }));
       } catch (e) { box.innerHTML = `<div class="empty-state">${icon('alert')}<div>${esc(e.message)}</div></div>`; }
     };
+      footer: `<button class="btn btn-primary" id="dns-check">${icon('refresh')} ${t('dom.check_btn')}</button><button class="btn" data-close>${t('dom.close')}</button>`,
+    });
+    const renderResults = (r) => {
+      const box = dnsModal.el.querySelector('#dns-records');
+      const fails = r.results.filter(x => !x.ok);
+      box.innerHTML = `
+        ${r.ok
+          ? `<div class="junk-warn" style="background:rgba(47,158,110,.12);color:var(--success)">${icon('check')} ${t('dom.check_allok')}</div>`
+          : `<div class="junk-warn" style="cursor:pointer" id="dns-fail-alert">${icon('alert')} <b>${t('dom.check_missing', { n: fails.length })}</b> — ${t('dom.check_click')}</div>`}
+        <div class="table-wrap"><table class="table">
+          <thead><tr><th>${t('dom.check_item')}</th><th>${t('dom.check_expect')}</th><th>${t('dom.check_found')}</th><th>${t('filters.status')}</th></tr></thead>
+          <tbody>${r.results.map(x => `
+            <tr>
+              <td><b>${esc(x.name)}</b>${x.note ? `<div style="font-size:11px;color:var(--text-3);margin-top:3px">${esc(x.note)}</div>` : ''}</td>
+              <td style="max-width:170px;word-break:break-all;font-size:12px">${esc(x.expected)}</td>
+              <td style="max-width:230px;word-break:break-all;font-size:12px">${esc(x.found || '—')}</td>
+              <td><span class="badge ${x.ok ? 'badge-green' : 'badge-red'}">${x.ok ? t('dom.check_okrec') : t('dom.check_missingrec')}</span></td>
+            </tr>`).join('')}</tbody>
+        </table></div>
+        <p style="font-size:12px;color:var(--text-3);margin-top:10px">${t('dom.check_note')}</p>`;
+      box.querySelector('#dns-fail-alert')?.addEventListener('click', () => showFailPopup(fails));
+    };
+    const showFailPopup = (fails) => {
+      const m = modal({
+        title: t('dom.check_missing', { n: fails.length }),
+        body: `
+          <p style="font-size:13px;color:var(--text-2);margin-bottom:12px">${t('dom.check_missing_hint')}</p>
+          ${fails.map(f => `
+            <div style="border:1px solid var(--danger);border-radius:9px;padding:11px 14px;margin-bottom:10px">
+              <b style="color:var(--danger)">${esc(f.name)}</b>
+              <div style="font-size:12px;margin-top:5px">${t('dom.check_expect')}: <code>${esc(f.expected)}</code></div>
+              <div style="font-size:12px">${t('dom.check_found')}: <code>${esc(f.found || '— 未解析到 —')}</code></div>
+              ${f.note ? `<div style="font-size:11.5px;color:var(--text-3);margin-top:4px">${esc(f.note)}</div>` : ''}
+            </div>`).join('')}
+          <p style="font-size:12px;color:var(--text-3)">${t('dom.check_missing_tip')}</p>`,
+      footer: `<button class="btn btn-primary" data-close>${t('dom.close')}</button>`,
+      });
+    };
+    const runCheck = async () => {
+      const box = dnsModal.el.querySelector('#dns-records');
+      box.innerHTML = `<div style="text-align:center;padding:16px"><span class="spinner"></span><div style="color:var(--text-3);font-size:12.5px">${t('dom.check_running')}</div></div>`;
+      try {
+        const ip = dnsModal.el.querySelector('#dns-ip').value.trim() || '';
+        const r = await API.get(`/admin/domains/${b.dataset.dns}/check?ip=${encodeURIComponent(ip)}`);
+        renderResults(r);
+      } catch (e) { box.innerHTML = `<div class="empty-state">${icon('alert')}<div>${esc(e.message)}</div></div>`; }
+    };
+    dnsModal.el.querySelector('#dns-check').addEventListener('click', runCheck);
     dnsModal.el.querySelector('#dns-ip').addEventListener('change', loadDns);
     // 自动探测服务器公网出口 IP 预填（NAT/多线路环境探测值可能不准，可手动修改后回车刷新）
     API.get('/admin/myip').then(({ ip }) => {

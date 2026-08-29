@@ -107,10 +107,17 @@ export function startSMTPServers() {
     authOptional: true,
     disabledCommands: ['AUTH'],
     size: config.smtpMaxSize,
+    onConnect(session, cb) {
+      console.log(`[smtp] 收信连入 from ${session.remoteAddress}`);
+      cb();
+    },
     onRcptTo(address, session, cb) {
       if (rateLimited(session.remoteAddress)) return cb(new Error('发送频率超限，请稍后再试'));
       const target = resolveRcpt(address.address);
-      if (!target) return cb(new Error(`<${address.address}> 收件人不存在`));
+      if (!target) {
+        console.log(`[smtp] 拒收（收件人不存在）${address.address} from ${session.remoteAddress}`);
+        return cb(new Error(`<${address.address}> 收件人不存在`));
+      }
       cb();
     },
     onData(stream, session, cb) { handleData(stream, session, cb); },

@@ -70,6 +70,12 @@ export async function render() {
         </div>
       </nav>
       <main class="app-main" id="main"></main>
+      <nav class="app-tabbar">
+        <button data-nav="mail" class="${route === 'mail' ? 'active' : ''}">${icon('mail')}<span>${t('nav.mail')}</span></button>
+        <button data-nav="contacts" class="${route === 'contacts' ? 'active' : ''}">${icon('users')}<span>${t('nav.contacts')}</span></button>
+        ${API.user?.role === 'admin' ? `<button data-nav="admin" class="${route === 'admin' ? 'active' : ''}">${icon('chart')}<span>${t('nav.admin')}</span></button>` : ''}
+        <button data-nav="settings" class="${route === 'settings' ? 'active' : ''}">${icon('gear')}<span>${t('nav.settings')}</span></button>
+      </nav>
     </div>`;
 
   app.querySelectorAll('[data-nav]').forEach(btn => {

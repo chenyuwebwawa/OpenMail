@@ -2,6 +2,8 @@
 import { Router } from 'express';
 import path from 'node:path';
 import fs from 'node:fs';
+import dns from 'node:dns';
+import net from 'node:net';
 import bcrypt from 'bcryptjs';
 import { db, q, now, audit, getSetting, setSetting } from '../db.js';
 import { config, ensureDirs } from '../config.js';
@@ -14,6 +16,65 @@ const router = Router();
 // 所有 /admin 路由要求管理员角色（RBAC）
 const guard = (req, res, next) => requireAuth('admin')(req, res, next);
 router.use('/admin', guard);
+
+// ---------- DNS 解析连通性一键检测 ----------
+router.get('/admin/domains/:id/check', async (req, res) => {
+  const d = q.get('SELECT * FROM domains WHERE id = ?', req.params.id);
+  if (!d) return res.status(404).json({ error: '域名不存在' });
+  const base = config.baseUrl.replace(/^https?:\/\//, '').split(':')[0] || `mail.${d.name}`;
+  const ip = String(req.query.ip || '').trim();
+  const dnsProm = dns.promises;
+  const results = [];
+
+  const check = async (name, expectSub, note, run) => {
+    try {
+      const found = (await run()) || null;
+      const ok = !!found && (expectSub === '' || String(found).toLowerCase().includes(expectSub.toLowerCase()));
+      results.push({ name, expected: expectSub || '—', found, ok, note: note || '' });
+    } catch (e) {
+      results.push({ name, expected: expectSub || '—', found: null, ok: false, note: (note || '') + (e.code ? ` (${e.code})` : '') });
+    }
+  };
+
+  await check(`A 记录 · ${base}`, '', '邮件服务器主机名指向服务器 IP',
+    async () => (await dnsProm.resolve4(base)).join(', '));
+  await check(`MX 记录 · ${d.name}`, base, '告诉外部服务器把信投到哪里',
+    async () => (await dnsProm.resolveMx(d.name)).sort((a, b) => a.priority - b.priority).map(m => m.exchange).join(', '));
+  await check('SPF · TXT', 'v=spf1', '声明有权代本域发信的 IP',
+    async () => {
+      const flat = (await dnsProm.resolveTxt(d.name)).map(t => t.join(''));
+      return flat.find(s => s.startsWith('v=spf1')) || null;
+    });
+  await check(`DKIM · ${d.dkim_selector}._domainkey`, 'v=DKIM1', '发信签名公钥',
+    async () => {
+      const flat = (await dnsProm.resolveTxt(`${d.dkim_selector}._domainkey.${d.name}`)).map(t => t.join(''));
+      return flat.find(s => s.replace(/\s/g, '').startsWith('v=DKIM1')) || null;
+    });
+  await check('DMARC · _dmarc', 'v=DMARC', '验证失败策略与报告',
+    async () => {
+      const flat = (await dnsProm.resolveTxt(`_dmarc.${d.name}`)).map(t => t.join(''));
+      return flat.find(s => s.startsWith('v=DMARC')) || null;
+    });
+  if (ip) {
+    let ptr = null;
+    try { ptr = (await dnsProm.reverse(ip))[0] || null; } catch {}
+    results.push({ name: `PTR 反向解析 · ${ip}`, expected: base, found: ptr, ok: !!ptr && ptr.toLowerCase().includes(base.toLowerCase()),
+      note: 'PTR 不在 DNS 服务商配置，需在云服务商控制台/工单设置' });
+  }
+  // 本机 SMTP 收信端口连通（验证服务在监听；外部能否连入取决于安全组/防火墙）
+  const banner = await new Promise((resolve) => {
+    const sock = net.createConnection({ host: '127.0.0.1', port: config.smtpPort }, () => {});
+    let got = null;
+    const done = (v) => { try { sock.destroy(); } catch {} resolve(v); };
+    sock.setTimeout(3000, () => done(null));
+    sock.on('data', (buf) => { if (/^220/.test(buf.toString())) { got = `220 就绪（本机 :${config.smtpPort}）`; done(got); } });
+    sock.on('error', () => done(null));
+  });
+  results.push({ name: `SMTP 收信监听 · 本机:${config.smtpPort}`, expected: '220', found: banner, ok: !!banner,
+    note: '本机自测。外部能否连入还取决于云安全组/防火墙对入站 25 端口的放行' });
+
+  res.json({ domain: d.name, ok: results.every(r => r.ok), results });
+});
 
 // ---------- 仪表盘 ----------
 // 探测服务器公网出口 IP（用于 DNS 记录示例预填；NAT 场景可能不准，允许手动修改）
