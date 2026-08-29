@@ -42,7 +42,13 @@ function makeTransport() {
     });
   }
   // 直投模式：nodemailer 自动做 MX 查询（需要出站 25 端口）
-  return nodemailer.createTransport({ connectionTimeout: 30000, socketTimeout: 60000 });
+  // MTA 间 STARTTLS 为机会性加密（RFC 3207 惯例，等同 Postfix 的 may 模式）：
+  // 加密优先，但不校验对方证书链 —— 大量邮件服务器（含国内 MX）在 25 端口使用自签证书
+  return nodemailer.createTransport({
+    connectionTimeout: 30000,
+    socketTimeout: 60000,
+    tls: { rejectUnauthorized: false },
+  });
 }
 
 async function processOutboundQueue() {
