@@ -51,11 +51,27 @@ v=DMARC1; p=reject; rua=mailto:admin@…                    ← 最终：全部�
 
 ## 反向解析（PTR）
 
-很多接收方（尤其 Gmail、Outlook、QQ 企业邮）**直接拒收没有 PTR 或 PTR 不匹配的 IP**。
+很多接收方（尤其 Gmail、Outlook、QQ 企业邮）**直接拒收没有 PTR 或 PTR 不匹配的 IP** 的来信。
 
-- 阿里云 / 腾讯云 / AWS 均可在控制台提交 PTR 设置；
-- PTR 必须指向一个能解析回该 IP 的主机名（正向反向要闭环）；
-- 主机名建议与 `OM_BASE_URL` / HELO 名一致。
+> ⚠️ **PTR 不在你的 DNS 服务商（DNSPod/Cloudflare/阿里云解析）添加！**
+> 你在 DNSPod 管理的是「域名 → IP」的正向解析；而 PTR 是「IP → 域名」的反向解析，IP 地址段属于**云服务商/VPS 商**，必须由他们设置。
+
+各服务商的设置入口：
+
+| 服务商 | 入口 |
+| --- | --- |
+| 腾讯云 | 控制台搜索「反向解析」自助绑定 EIP；无入口则提交工单 |
+| 阿里云 | 提交工单申请（免费，1-2 个工作日） |
+| Vultr / Hetzner / DMIT 等 | 面板 → 网络/IP → rDNS 设置 |
+| AWS | 提交申请表单 |
+
+**工单话术模板**：
+
+> 请将服务器 `你的公网IP` 的反向解析（PTR/rDNS）指向 `mail.你的域名.com`。该 IP 上的邮件服务使用域名 `你的域名.com`（A 记录已指向该 IP），感谢。
+
+- PTR 必须与邮件主机名一致且正反向闭环（`mail.example.com` → IP → 反解回 `mail.example.com`）；
+- 主机名建议与 `OM_BASE_URL` / HELO 名一致；
+- 若服务商拒绝配置 PTR → 放弃直投，改用 `OM_RELAY_*` 中继发信（中继服务商的 IP 自带合规 PTR；入站收信不受影响）。
 
 ## 送达率检查清单
 
