@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>辰语正式发布 OpenMail 开源邮件系统，开启个人、团队邮件系统新篇章</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%234f6ef7'/><path d='M22 32 L50 56 L78 32' stroke='white' stroke-width='9' fill='none' stroke-linecap='round' stroke-linejoin='round'/><rect x='22' y='30' width='56' height='40' rx='8' stroke='white' stroke-width='7' fill='none'/></svg>">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background:#f2f3f7;color:#2b2f3a;line-height:1.9;font-size:16px;
+}
+.page{max-width:677px;margin:0 auto;background:#fff;box-shadow:0 0 40px rgba(0,0,0,.06)}
+@media(max-width:720px){.page{box-shadow:none}}
+
+/* ---- 头图区 ---- */
+.cover{background:linear-gradient(135deg,#4f6ef7 0%,#744ff7 60%,#9b4ff7 100%);padding:52px 34px 44px;color:#fff;position:relative;overflow:hidden}
+.cover::before{content:'';position:absolute;width:340px;height:340px;border-radius:50%;background:rgba(255,255,255,.1);top:-140px;right:-90px}
+.cover::after{content:'';position:absolute;width:220px;height:220px;border-radius:50%;background:rgba(255,255,255,.08);bottom:-90px;left:-60px}
+.badge-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;position:relative}
+.badge-row span{font-size:12px;background:rgba(255,255,255,.18);padding:4px 12px;border-radius:20px;letter-spacing:1px}
+.cover h1{font-size:25px;line-height:1.5;letter-spacing:.5px;position:relative;font-weight:700}
+.cover .sub{margin-top:16px;font-size:14px;opacity:.92;position:relative}
+.meta{margin-top:24px;font-size:13px;opacity:.85;position:relative;display:flex;align-items:center;gap:10px}
+.meta .logo{width:30px;height:30px}
+
+/* ---- 正文 ---- */
+.body{padding:34px 26px 20px}
+p{margin:0 0 18px;text-align:justify}
+.lead{font-size:16.5px;color:#3a3f4d}
+.lead b{color:#4f6ef7}
+
+/* 分节标题 */
+h2.sec{margin:44px 0 20px;font-size:20px;line-height:1.4;padding-left:13px;border-left:5px solid #4f6ef7;color:#1d2230}
+h2.sec .en{display:block;font-size:11px;color:#a8b0c2;letter-spacing:2px;margin-bottom:4px;font-weight:600}
+
+/* 引用块 */
+.quote{background:#f5f7fd;border-left:4px solid #4f6ef7;border-radius:0 10px 10px 0;padding:16px 18px;margin:0 0 20px;font-size:14.5px;color:#55607a}
+.quote b{color:#4f6ef7}
+
+/* 优势卡片 */
+.adv{border:1px solid #e8ebf4;border-radius:14px;padding:20px 20px 14px;margin-bottom:14px;background:#fff;transition:.2s}
+.adv:hover{border-color:#c9d4ff;box-shadow:0 8px 26px rgba(79,110,247,.1)}
+.adv h4{font-size:16px;margin-bottom:8px;color:#1d2230}
+.adv h4 .no{display:inline-block;width:24px;height:24px;border-radius:7px;background:#4f6ef7;color:#fff;text-align:center;line-height:24px;font-size:13px;margin-right:9px}
+.adv p{font-size:14px;color:#5b6478;margin:0}
+
+/* 截图 */
+figure{margin:26px 0}
+figure img{width:100%;border-radius:12px;border:1px solid #e8ebf4;box-shadow:0 14px 40px rgba(20,26,46,.12)}
+figcaption{text-align:center;font-size:12.5px;color:#98a0b3;margin-top:10px}
+
+/* 功能清单 */
+.flist{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 20px}
+.fitem{background:#f7f8fc;border-radius:11px;padding:14px 15px;font-size:13.5px;color:#3a3f4d;display:flex;gap:8px;align-items:flex-start;line-height:1.7}
+.fitem::before{content:'✓';color:#2f9e6e;font-weight:800;flex-shrink:0}
+.fitem b{display:block;color:#1d2230;font-size:14px}
+@media(max-width:560px){.flist{grid-template-columns:1fr}}
+
+/* 人群卡片 */
+.crowd{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+.ccard{border:1px solid #e8ebf4;border-radius:14px;padding:18px 17px;background:linear-gradient(180deg,#fbfcff,#f5f7fd)}
+.ccard .ico{font-size:26px}
+.ccard h5{font-size:15px;margin:9px 0 6px;color:#1d2230}
+.ccard p{font-size:13px;color:#5b6478;margin:0;line-height:1.8}
+@media(max-width:560px){.crowd{grid-template-columns:1fr}}
+
+/* 终端 */
+.term{background:#0c1122;border-radius:12px;overflow:hidden;margin:0 0 8px}
+.term-bar{display:flex;align-items:center;gap:6px;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.08)}
+.term-bar i{width:10px;height:10px;border-radius:50%}
+.term-bar .r{background:#ff5f57}.term-bar .y{background:#febc2e}.term-bar .g{background:#28c840}
+.term pre{padding:15px 17px;font-family:ui-monospace,Consolas,monospace;font-size:13px;color:#d7e2ff;overflow-x:auto;white-space:pre-wrap;word-break:break-all;line-height:1.8}
+
+/* 数据条 */
+.stats{display:flex;border:1px solid #e8ebf4;border-radius:14px;overflow:hidden;margin:26px 0}
+.stats div{flex:1;text-align:center;padding:16px 6px;border-right:1px solid #e8ebf4}
+.stats div:last-child{border-right:none}
+.stats b{display:block;font-size:22px;color:#4f6ef7;letter-spacing:-.5px}
+.stats span{font-size:11.5px;color:#98a0b3}
+
+/* 结尾 CTA */
+.cta{margin:38px 0 8px;background:linear-gradient(135deg,#4f6ef7,#744ff7);border-radius:16px;padding:30px 26px;text-align:center;color:#fff}
+.cta h3{font-size:19px;position:relative}
+.cta p{font-size:13.5px;opacity:.92;margin:10px 0 18px;position:relative}
+.cta a{display:inline-block;background:#fff;color:#4f6ef7;font-weight:700;font-size:14.5px;padding:11px 30px;border-radius:24px;text-decoration:none;position:relative}
+.cta a+a{background:rgba(255,255,255,.16);color:#fff;margin-left:10px}
+
+/* 分隔 */
+.divider{text-align:center;margin:40px 0 34px;color:#c6ccda;font-size:12px;letter-spacing:6px}
+
+/* 页脚 */
+.foot{padding:26px 26px 40px;border-top:1px solid #eef0f6}
+.foot p{font-size:12.5px;color:#98a0b3;text-align:center;margin:0 0 6px}
+.foot a{color:#4f6ef7;text-decoration:none;font-weight:600}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- 封面 -->
+  <div class="cover">
+    <div class="badge-row"><span>正式发布</span><span>开源 · MIT</span><span>v1.0</span></div>
+    <h1>辰语正式发布 OpenMail 开源邮件系统<br>开启个人、团队邮件系统新篇章</h1>
+    <div class="sub">一个进程，跑起完整邮件系统：SMTP / IMAP / POP3 全协议、三栏 Webmail、AI 帮写与翻译、邮件模板、多域名 DKIM、反垃圾、10 种界面语言。</div>
+    <div class="meta">
+      <svg class="logo" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="rgba(255,255,255,.2)"/><path d="M22 32 L50 56 L78 32" stroke="white" stroke-width="9" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="22" y="30" width="56" height="40" rx="8" stroke="white" stroke-width="7" fill="none"/></svg>
+      <span>辰语 Chenyu · 2026 年 8 月</span>
+    </div>
+  </div>
+
+  <div class="body">
+
+    <!-- 导语 -->
+    <p class="lead">过去十年，个人和小团队想要一个「完全属于自己的邮箱」，只有两条路：要么忍受大厂邮箱的广告与数据条款，要么面对 Postfix + Dovecot + 反垃圾 + Webmail 十几个组件的部署迷宫。</p>
+    <p class="lead">今天，辰语正式发布 <b>OpenMail</b> —— 一个用 <b>单个进程</b> 跑起 <b>完整邮件系统</b> 的开源项目。SMTP、IMAP、POP3 全协议收发，精致的 Webmail 与管理后台，内置 AI 助手与邮件模板，多域名 DKIM 与反垃圾开箱即用。<b>安装只需一条命令</b>。</p>
+
+    <div class="stats">
+      <div><b>1</b><span>个进程全部服务</span></div>
+      <div><b>8</b><span>项邮件协议端口</span></div>
+      <div><b>10</b><span>种界面语言</span></div>
+      <div><b>100+</b><span>项自动化测试</span></div>
+    </div>
+
+    <!-- 核心优势 -->
+    <h2 class="sec"><span class="en">ADVANTAGES</span>六大核心优势</h2>
+
+    <div class="adv"><h4><span class="no">1</span>极简架构，一台 1G 内存的小服务器就能跑</h4><p>没有 MySQL、Redis、十几容器互相拉扯。OpenMail 是一个 Node.js 进程 + 一个 SQLite 文件：备份就是拷一个文件，迁移就是搬一个目录，出问题一眼能看到。</p></div>
+    <div class="adv"><h4><span class="no">2</span>全协议收发，与所有邮箱互通</h4><p>SMTP 25 / 587 / 465，IMAP 143 / 993，POP3 110 / 995。Thunderbird、Apple Mail、手机邮件 App 开箱即连，QQ、163、Gmail、Outlook 双向互通。</p></div>
+    <div class="adv"><h4><span class="no">3</span>AI 原生：帮写、翻译、分析邮件</h4><p>配置任意 OpenAI 兼容接口，写信时 AI 直接成稿，一键把邮件翻译成 12 种语言，收到邮件 AI 帮你提炼摘要、要点和待办。密钥加密存储在服务器，不出你的机器。</p></div>
+    <div class="adv"><h4><span class="no">4</span>开箱即用的企业级安全</h4><p>SPF / DKIM / DMARC 三件套自动生成并一键复制 DNS 记录；规则式反垃圾评分；2FA 两步验证、RBAC 权限、全操作审计日志，一样不少。</p></div>
+    <div class="adv"><h4><span class="no">5</span>10 种界面语言，阿拉伯语自动 RTL</h4><p>中文、英文内置，法 / 西 / 葡 / 俄 / 阿 / 印地 / 孟加拉 / 乌尔都语以语言包形式提供，阿语与乌尔都语整站自动镜像为从右向左布局。</p></div>
+    <div class="adv"><h4><span class="no">6</span>四种安装方式，最快三分钟上线</h4><p>一键脚本、Docker、宝塔 / 1Panel 面板、手动安装。自动生成 TLS 证书回填、自动注册系统服务、自动预装全部语言包。</p></div>
+
+    <!-- 设计 -->
+    <h2 class="sec"><span class="en">DESIGN</span>设计：像做产品一样做邮件系统</h2>
+    <p>我们不认为自建邮箱就该长得像二十年前运维后台。OpenMail 的 Webmail 采用了<strong>三栏式现代布局</strong>：左侧文件夹树、中间会话列表、右侧阅读窗，支持拖拽整理、星标过滤、全文搜索与会话线程聚合。</p>
+    <figure>
+      <img src="/screenshots/inbox.png" alt="OpenMail 三栏收件箱">
+      <figcaption>▲ 三栏收件箱：会话线程、批量操作、拖拽整理</figcaption>
+    </figure>
+    <p>写信窗口是完整的富文本编辑器：<strong>收件人自动补全、附件拖拽上传、截图直接粘贴进正文</strong>，配合定时发送与每 12 秒自动保存的草稿，写一封正式邮件从未如此轻松。</p>
+    <figure>
+      <img src="/screenshots/compose.png" alt="OpenMail 写信窗口">
+      <figcaption>▲ 写信：富文本 + 附件 + 模板 + AI 助手</figcaption>
+    </figure>
+    <p>管理后台为管理员而生：实时统计与 14 天收发趋势、用户配额与封禁、<strong>域名添加即自动生成 DKIM 密钥，DNS 记录一键检测</strong>，外发队列与审计日志全程可视。</p>
+    <figure>
+      <img src="/screenshots/admin-dashboard.png" alt="OpenMail 管理后台">
+      <figcaption>▲ 管理后台：仪表盘 / 域名 DKIM / 审计日志</figcaption>
+    </figure>
+
+    <!-- 主打功能 -->
+    <h2 class="sec"><span class="en">FEATURES</span>主打功能一览</h2>
+    <div class="flist">
+      <div class="fitem"><span><b>邮件收发管理</b>读 / 写 / 回复 / 转发 / 批量操作，拖拽整理</span></div>
+      <div class="fitem"><span><b>草稿与定时发送</b>12 秒自动保存，到点自动投递</span></div>
+      <div class="fitem"><span><b>附件管理</b>拖拽上传、预览下载、截图直接粘贴</span></div>
+      <div class="fitem"><span><b>邮件搜索</b>发件人 / 主题 / 正文全文检索</span></div>
+      <div class="fitem"><span><b>会话线程</b>按 References 链路自动聚合对话</span></div>
+      <div class="fitem"><span><b>邮件模板</b>导入 HTML 或 AI 生成，写信一键插入</span></div>
+      <div class="fitem"><span><b>反垃圾认证</b>SPF / DKIM / DMARC + 评分入垃圾箱</span></div>
+      <div class="fitem"><span><b>多域名与别名</b>配额管理、Catch-all 兜底收信</span></div>
+      <div class="fitem"><span><b>2FA 与审计</b>TOTP 双因素 + 全操作审计日志</span></div>
+      <div class="fitem"><span><b>移动端适配</b>底部标签栏、悬浮写信、RTL 镜像</span></div>
+      <div class="fitem"><span><b>通讯录</b>分组管理、vCard / CSV 导入导出</span></div>
+      <div class="fitem"><span><b>归档清理</b>一键归档已读，清空垃圾箱</span></div>
+    </div>
+
+    <!-- 适合人群 -->
+    <h2 class="sec"><span class="en">WHO IS IT FOR</span>它适合谁</h2>
+    <div class="crowd">
+      <div class="ccard"><div class="ico">🧑‍💻</div><h5>个人与极客</h5><p>拥有 @你自己的域名 的邮箱，数据 100% 在自己服务器，摆脱大厂广告与隐私条款。</p></div>
+      <div class="ccard"><div class="ico">👨‍👩‍👧‍👦</div><h5>小型团队</h5><p>5-50 人团队的企业邮箱：配额、分组、审计、共享域名管理，成本几乎为零。</p></div>
+      <div class="ccard"><div class="ico">🏢</div><h5>私有化部署需求</h5><p>内网或合规环境下的邮件服务：SQLite 单文件存储，离线可用，备份即拷贝。</p></div>
+      <div class="ccard"><div class="ico">🎓</div><h5>开发者与学习者</h5><p>想读懂邮件协议？OpenMail 用几千行可读代码实现了完整 SMTP/IMAP/POP3，是最好的学习样本。</p></div>
+    </div>
+
+    <!-- 快速开始 -->
+    <h2 class="sec"><span class="en">QUICK START</span>三分钟开始使用</h2>
+    <div class="term">
+      <div class="term-bar"><i class="r" style="background:#ff5f57"></i><i class="y" style="background:#febc2e"></i><i class="g" style="background:#28c840"></i></div>
+      <pre># 全新 Linux 服务器一键安装
+curl -fsSL https://cdn.jsdelivr.net/gh/chenyuwebwawa/OpenMail@main/install.sh | bash</pre>
+    </div>
+    <p style="font-size:13px;color:#98a0b3;margin-bottom:22px">支持 Docker、宝塔 / 1Panel 面板、Windows 等更多安装方式，详见 GitHub 仓库 README。</p>
+
+    <!-- CTA -->
+    <div class="cta">
+      <h3>开源 · 免费 · 数据属于你自己</h3>
+      <p>GitHub 搜索 OpenMail，点亮 Star 支持我们持续迭代</p>
+      <a href="https://github.com/chenyuwebwawa/OpenMail" target="_blank" rel="noopener">GitHub 仓库</a><a href="https://github.com/chenyuwebwawa/OpenMail" target="_blank" rel="noopener">立即安装 →</a>
+    </div>
+
+    <div class="divider">· · ·</div>
+
+    <p style="font-size:13.5px;color:#5b6478">OpenMail 遵循 MIT 协议开源，欢迎提交 Issue 与 Pull Request。如果你在部署中遇到任何问题，欢迎在 GitHub Issues 中交流，我们会认真回复每一封「邮件」。</p>
+    <p style="font-size:13.5px;color:#5b6478">祝你的第一封自有域名邮件，发送顺利。</p>
+
+  </div>
+
+  <div class="foot">
+    <p>©辰语 2026 Developed by <a href="https://jouaaaaa.top/" target="_blank" rel="noopener noreferrer">JOUaaaaa</a></p>
+    <p>OpenMail — 开源自托管邮件套件 · <a href="https://github.com/chenyuwebwawa/OpenMail" target="_blank" rel="noopener">github.com/chenyuwebwawa/OpenMail</a></p>
+  </div>
+
+</div>
+</body>
+</html>
