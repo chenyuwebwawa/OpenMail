@@ -124,10 +124,12 @@ export function startSMTPServers() {
         console.log(`[smtp] 拒收（收件人不存在）${address.address} from ${session.remoteAddress}`);
         return cb(new Error(`<${address.address}> 收件人不存在`));
       }
+      console.log(`[smtp] 收件人接受 ${address.address} from ${session.remoteAddress}`);
       cb();
     },
     onData(stream, session, cb) { handleData(stream, session, cb); },
     onMailFrom(address, session, cb) {
+      console.log(`[smtp] MAIL FROM ${address.address} from ${session.remoteAddress}`);
       cb();
     },
   });

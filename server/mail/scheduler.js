@@ -1,8 +1,9 @@
 // 调度器：定时发送 + 站外投递队列重试
 import nodemailer from 'nodemailer';
+import dns from 'node:dns';
 import { q, now, audit } from '../db.js';
 import { config } from '../config.js';
-import { scheduledDue, getFolderByType } from './mailstore.js';
+import { scheduledDue } from './mailstore.js';
 import { sendMessage, updateSentStatus } from './outbound.js';
 
 const MAX_ATTEMPTS = 5;
@@ -31,24 +32,39 @@ async function processScheduledSends() {
   }
 }
 
-// ---------- 站外投递 ----------
-function makeTransport() {
-  const r = config.relay;
-  if (r.host) {
-    return nodemailer.createTransport({
-      host: r.host, port: r.port, secure: r.secure,
-      auth: r.user ? { user: r.user, pass: r.pass } : undefined,
-      connectionTimeout: 30000, socketTimeout: 60000,
-    });
+// ---------- 站外投递：真正的 MX 直投（RFC 5321） ----------
+// nodemailer 不会自动做 MX 查询，必须手动解析收件域的 MX 记录并逐台投递
+async function deliverToRecipient(item) {
+  const domain = String(item.recipient || '').split('@')[1] || '';
+  let hosts = [];
+  try {
+    hosts = (await dns.promises.resolveMx(domain))
+      .sort((a, b) => a.priority - b.priority)
+      .map(m => m.exchange);
+  } catch {}
+  if (!hosts.length) hosts = [domain]; // 无 MX 记录时按 A 记录主机投递（RFC 5321 §5.1）
+  let lastErr = null;
+  for (const host of hosts.slice(0, 3)) {
+    try {
+      const transport = nodemailer.createTransport({
+        host,
+        port: 25,
+        connectionTimeout: 15000,
+        greetingTimeout: 15000,
+        socketTimeout: 30000,
+        tls: { rejectUnauthorized: false }, // MTA 间机会性加密：不校验对方证书
+      });
+      await transport.sendMail({
+        envelope: { from: item.sender, to: [item.recipient] },
+        raw: Buffer.from(item.raw_eml, 'utf8'),
+      });
+      return { ok: true, via: host };
+    } catch (err) {
+      lastErr = err;
+      console.warn(`[queue] ${item.recipient} 经 ${host}:25 投递失败: ${err.message}`);
+    }
   }
-  // 直投模式：nodemailer 自动做 MX 查询（需要出站 25 端口）
-  // MTA 间 STARTTLS 为机会性加密（RFC 3207 惯例，等同 Postfix 的 may 模式）：
-  // 加密优先，但不校验对方证书链 —— 大量邮件服务器（含国内 MX）在 25 端口使用自签证书
-  return nodemailer.createTransport({
-    connectionTimeout: 30000,
-    socketTimeout: 60000,
-    tls: { rejectUnauthorized: false },
-  });
+  throw lastErr || new Error('无可用投递路由');
 }
 
 async function processOutboundQueue() {
@@ -57,22 +73,17 @@ async function processOutboundQueue() {
     MAX_ATTEMPTS, now()
   );
   if (!due.length) return;
-  const transport = makeTransport();
   for (const item of due) {
     try {
-      await transport.sendMail({
-        envelope: { from: item.sender, to: [item.recipient] },
-        raw: Buffer.from(item.raw_eml, 'utf8'),
-      });
+      const r = await deliverToRecipient(item);
       q.run("UPDATE outbound_queue SET status = 'sent', last_error = '' WHERE id = ?", item.id);
       if (item.message_id) updateSentStatus(item.message_id, 'sent');
-      audit(null, item.sender, 'mail.relay_sent', `to=${item.recipient}`);
+      audit(null, item.sender, 'mail.relay_sent', `to=${item.recipient} via=${r.via}`);
     } catch (err) {
       const attempts = item.attempts + 1;
       const errMsg = String(err.message || err).slice(0, 500);
       if (attempts >= MAX_ATTEMPTS) {
         q.run("UPDATE outbound_queue SET status = 'failed', attempts = ?, last_error = ? WHERE id = ?", attempts, errMsg, item.id);
-        // 退信通知
         const { deliverSystemMail } = await import('./delivery.js');
         deliverSystemMail(item.sender,
           `投递失败: ${item.recipient}`,
