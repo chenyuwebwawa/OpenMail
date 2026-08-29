@@ -34,6 +34,11 @@ async function processScheduledSends() {
 
 // ---------- 站外投递：真正的 MX 直投（RFC 5321） ----------
 // nodemailer 不会自动做 MX 查询，必须手动解析收件域的 MX 记录并逐台投递
+// EHLO 名必须是对外邮件域名（163/QQ/Gmail 等会校验，机器名会被拒收）
+const EHLO_NAME = (() => {
+  try { return new URL(config.baseUrl).hostname; } catch { return ''; }
+})();
+
 async function deliverToRecipient(item) {
   const domain = String(item.recipient || '').split('@')[1] || '';
   let hosts = [];
@@ -49,6 +54,7 @@ async function deliverToRecipient(item) {
       const transport = nodemailer.createTransport({
         host,
         port: 25,
+        name: EHLO_NAME || undefined,
         connectionTimeout: 15000,
         greetingTimeout: 15000,
         socketTimeout: 30000,

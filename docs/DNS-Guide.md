@@ -84,6 +84,28 @@ v=DMARC1; p=reject; rua=mailto:admin@…                    ← 最终：全部�
 | [Google Postmaster Tools](https://postmaster.google.com/) | Gmail 域名信誉 |
 | `dig MX example.com` / `dig TXT …` | 记录是否全球生效 |
 
+## 与所有主流邮箱互通的检查清单
+
+自建邮件要和 QQ / 163 / Gmail / Outlook / 企业邮箱等**全部互通**，以下五项缺一不可（缺一项就会被某家拒收）：
+
+| # | 检查项 | 在哪配置 | 谁最严格 |
+| --- | --- | --- | --- |
+| 1 | MX 记录指向邮件主机 | DNS 服务商 | 全部 |
+| 2 | 入站 25 端口对外开放 | 云安全组 + 服务器防火墙 | 全部 |
+| 3 | **PTR 反向解析 = 邮件主机名** | 云服务商控制台/工单 | **163 / Outlook**（无 PTR 常直接拒收） |
+| 4 | **EHLO 名 = 邮件主机名** | OpenMail 已自动使用 `OM_BASE_URL` 的主机名 | **163**（机器名 EHLO 直接拒收） |
+| 5 | SPF + DKIM + DMARC 三件套 | DNS 服务商（后台一键生成） | **Gmail / QQ**（无 DKIM 进垃圾箱） |
+
+各家的"脾气"：
+
+- **QQ 邮箱**：新域名首次发信大概率进垃圾箱，正常收发几天到几周后自动转正；DKIM 必配。
+- **163 / 126**：对 EHLO 主机名和 PTR 校验最严格，且限频（同一 IP 每分钟有投递上限），群发务必放缓。
+- **Gmail**：强制要求 STARTTLS + SPF/DKIM/DMARC 对齐，缺 DKIM 基本进垃圾箱；可在 [Google Postmaster](https://postmaster.google.com/) 观察 IP 信誉。
+- **Outlook**：对 PTR 和营销类内容最敏感。
+- **企业邮箱（腾讯企业邮/阿里邮箱）**：规则同个人版，但拒收更快。
+
+**新服务器养信誉**：前两周只做少量正常内容的人际往来（每天几十封以内），避免群发和大量链接附件；[mail-tester](https://www.mail-tester.com) 得分 ≥ 9 后再放量。
+
 ## 常见坑
 
 1. **国内云封 25 端口** —— 出站入站都封。解封需工单申请（困难），更现实的方案是配置 `OM_RELAY_*` 走 587 中继。
