@@ -460,6 +460,12 @@ async function main() {
   const rmFr = await api('POST', '/api/admin/langs/remove', { token: tokAdmin16, body: { code: 'fr' } });
   ok('移除语言包 fr', rmFr.status === 200);
 
+  console.log('\n== 17.5 外发队列入队 ==');
+  const extSend = await api('POST', '/api/send', { token: tokA, body: { to: 'someone@external-check.com', subject: '外部队列入队测试', text: 'queue test' } });
+  ok('发往外部地址立即返回并入队', extSend.status === 200 && (extSend.json.external || []).length === 1, JSON.stringify(extSend.json));
+  const queueCheck = await api('GET', '/api/admin/queue', { token: tokAdmin16 });
+  ok('外发队列已记录外部收件人', queueCheck.status === 200 && JSON.stringify(queueCheck.json.queue).includes('external-check.com'), JSON.stringify(queueCheck.json.queue?.slice(0, 2)));
+
   console.log('\n== 17. 官网 / 邮件模板 / AI 配置 ==');
   const site = await fetch(BASE + '/');
   const siteHtml = await site.text();

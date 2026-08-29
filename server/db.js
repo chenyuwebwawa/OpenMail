@@ -236,11 +236,22 @@ CREATE TABLE IF NOT EXISTS outbound_queue (
   attempts INTEGER DEFAULT 0,
   next_attempt_at INTEGER NOT NULL,
   last_error TEXT DEFAULT '',
-  status TEXT DEFAULT 'queued'  -- queued / sent / failed
+  status TEXT DEFAULT 'queued',
+  created_at INTEGER
 );
 `;
 
 db.exec(SCHEMA);
+
+// ---- 轻量迁移：为旧库补齐后加的列（CREATE TABLE IF NOT EXISTS 不会改动已存在的表）----
+function migrate() {
+  const cols = (t) => db.prepare(`PRAGMA table_info(${t})`).all().map(c => c.name);
+  if (!cols('outbound_queue').includes('created_at')) {
+    db.exec('ALTER TABLE outbound_queue ADD COLUMN created_at INTEGER');
+    console.log('[migrate] outbound_queue 已补齐 created_at 列');
+  }
+}
+migrate();
 
 // ---- 助手 ----
 export const q = {
