@@ -11,9 +11,13 @@ export const ROOT = path.resolve(__dirname, '..');
 const envFile = path.join(ROOT, '.env');
 if (fs.existsSync(envFile)) {
   for (const line of fs.readFileSync(envFile, 'utf8').split(/\r?\n/)) {
-    const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/);
+    const m = line.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/);
     if (m && process.env[m[1]] === undefined) {
-      process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
+      let v = m[2];
+      const hash = v.indexOf(' #');                       // 剥离行内注释（空格+# 开头）
+      if (hash !== -1) v = v.slice(0, hash);
+      v = v.trim().replace(/^["']|["']$/g, '');           // 去掉包裹引号
+      process.env[m[1]] = v;
     }
   }
 }
