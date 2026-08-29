@@ -101,6 +101,15 @@ app.use((err, req, res, next) => {
 
 // ---------- 启动 ----------
 const httpServer = http.createServer(app);
+httpServer.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`[http] 端口 ${config.httpPort} 已被其他进程占用！`);
+    console.error(`  排查: ss -ltnp | grep :${config.httpPort}`);
+    console.error(`  解决: 停掉占用进程，或在 .env 中设置 OM_HTTP_PORT 换一个端口后重启本服务`);
+    process.exit(1);
+  }
+  throw err;
+});
 httpServer.listen(config.httpPort, () => {
   console.log(`[http] Webmail/管理后台: http://localhost:${config.httpPort}`);
 });
