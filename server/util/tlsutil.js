@@ -12,13 +12,18 @@ export function getTLSContext() {
   if (ctxCache) return ctxCache;
   ensureDirs();
   if (config.tlsCert && config.tlsKey) {
-    ctxCache = {
-      cert: fs.readFileSync(config.tlsCert),
-      key: fs.readFileSync(config.tlsKey),
-      generated: false,
-    };
-    console.log('[tls] 使用外部证书');
-    return ctxCache;
+    try {
+      ctxCache = {
+        cert: fs.readFileSync(config.tlsCert),
+        key: fs.readFileSync(config.tlsKey),
+        generated: false,
+      };
+      console.log('[tls] 使用外部证书');
+      return ctxCache;
+    } catch (err) {
+      console.warn(`[tls] 警告: 配置的证书读取失败(${err.code || err.message}): ${config.tlsCert}`);
+      console.warn('[tls] 本次启动回退为自签名证书，邮件服务不受影响。请检查证书路径或先完成签发。');
+    }
   }
   const certPath = path.join(config.dataDir, 'tls-cert.pem');
   const keyPath = path.join(config.dataDir, 'tls-key.pem');
