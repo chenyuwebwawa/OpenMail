@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenMail — 开源自托管邮件套件 · 一个进程的完整邮件系统</title>
+<meta name="description" content="OpenMail：SMTP/IMAP/POP3 全协议、三栏 Webmail、AI 助手、邮件模板、多域名 DKIM、反垃圾、10 种界面语言。单进程、零原生依赖、一键安装。">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%234f6ef7'/><path d='M22 32 L50 56 L78 32' stroke='white' stroke-width='9' fill='none' stroke-linecap='round' stroke-linejoin='round'/><rect x='22' y='30' width='56' height='40' rx='8' stroke='white' stroke-width='7' fill='none'/></svg>">
+<style>
+:root{
+  --primary:#4f6ef7; --primary2:#744ff7; --ink:#141a2e; --ink2:#4b5468; --ink3:#8a92a6;
+  --bg:#ffffff; --bg-soft:#f5f7fd; --border:#e6e9f4; --card:#ffffff;
+  --green:#2f9e6e; --amber:#d97706;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:var(--ink);background:var(--bg);overflow-x:hidden}
+a{color:var(--primary);text-decoration:none}
+img{max-width:100%;display:block}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+
+/* ---- nav ---- */
+.nav{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.82);backdrop-filter:blur(14px);border-bottom:1px solid var(--border)}
+.nav-inner{display:flex;align-items:center;gap:26px;height:62px}
+.logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:18px;color:var(--ink)}
+.nav-links{display:flex;gap:22px;margin-left:auto}
+.nav-links a{color:var(--ink2);font-size:14px;font-weight:500}
+.nav-links a:hover{color:var(--primary)}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:10px 20px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:.18s}
+.btn-p{background:var(--primary);color:#fff;box-shadow:0 4px 14px rgba(79,110,247,.35)}
+.btn-p:hover{background:#3d5bee;transform:translateY(-1px)}
+.btn-g{background:var(--bg-soft);color:var(--ink);border:1px solid var(--border)}
+.btn-g:hover{border-color:var(--primary);color:var(--primary)}
+.btn-sm{padding:7px 14px;font-size:13px;border-radius:8px}
+@media(max-width:760px){.nav-links{display:none}}
+
+/* ---- hero ---- */
+.hero{position:relative;padding:84px 0 70px;overflow:hidden}
+.hero::before{content:'';position:absolute;width:640px;height:640px;border-radius:50%;background:radial-gradient(circle,rgba(79,110,247,.16),transparent 65%);top:-220px;right:-140px;animation:float 9s ease-in-out infinite}
+.hero::after{content:'';position:absolute;width:480px;height:480px;border-radius:50%;background:radial-gradient(circle,rgba(116,79,247,.13),transparent 65%);bottom:-180px;left:-120px;animation:float 11s ease-in-out infinite reverse}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-26px)}}
+.hero-inner{position:relative;text-align:center;max-width:820px;margin:0 auto}
+.hero-badges{display:flex;gap:9px;justify-content:center;flex-wrap:wrap;margin-bottom:22px}
+.hero-badges span{font-size:12px;font-weight:600;color:var(--primary);background:rgba(79,110,247,.1);padding:5px 13px;border-radius:20px}
+.hero h1{font-size:clamp(30px,5vw,50px);line-height:1.2;letter-spacing:-1px}
+.hero h1 em{font-style:normal;background:linear-gradient(120deg,var(--primary),var(--primary2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p.sub{margin:20px auto 0;max-width:640px;color:var(--ink2);font-size:16.5px;line-height:1.85}
+.hero-cta{display:flex;gap:13px;justify-content:center;margin-top:30px;flex-wrap:wrap}
+.hero-cta .btn{padding:13px 28px;font-size:15px}
+.hero-note{margin-top:16px;font-size:13.5px;color:var(--ink3)}
+.hero-typing{margin-top:20px;font-size:14px;color:var(--ink3);min-height:22px}
+.hero-typing b{color:var(--primary)}
+.hero-stats{display:flex;gap:0;justify-content:center;margin-top:44px;border:1px solid var(--border);border-radius:16px;background:var(--card);box-shadow:0 10px 40px rgba(20,26,46,.06);max-width:760px;margin-left:auto;margin-right:auto;overflow:hidden}
+.hstat{flex:1;padding:20px 10px;text-align:center;border-right:1px solid var(--border)}
+.hstat:last-child{border-right:none}
+.hstat b{display:block;font-size:24px;letter-spacing:-.5px}
+.hstat span{font-size:12px;color:var(--ink3)}
+
+/* ---- sections ---- */
+section{padding:76px 0}
+.sec-head{text-align:center;max-width:640px;margin:0 auto 44px}
+.sec-head h2{font-size:clamp(24px,3.4vw,34px);letter-spacing:-.5px}
+.sec-head p{margin-top:13px;color:var(--ink2);font-size:15px;line-height:1.8}
+.eyebrow{display:inline-block;font-size:12.5px;font-weight:700;color:var(--primary);letter-spacing:2px;margin-bottom:12px;text-transform:uppercase}
+
+/* ---- feature tabs ---- */
+.ftabs{display:flex;gap:9px;justify-content:center;flex-wrap:wrap;margin-bottom:28px}
+.ftab{padding:10px 19px;border-radius:11px;border:1px solid var(--border);background:var(--card);cursor:pointer;font-size:14px;font-weight:600;color:var(--ink2);transition:.18s}
+.ftab:hover{border-color:var(--primary);color:var(--primary)}
+.ftab.on{background:var(--primary);border-color:var(--primary);color:#fff;box-shadow:0 6px 18px rgba(79,110,247,.3)}
+.fpanel{display:none;grid-template-columns:1fr 1.25fr;gap:44px;align-items:center;animation:fadeUp .4s ease}
+.fpanel.on{display:grid}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.fpanel h3{font-size:22px;margin-bottom:14px}
+.fpanel p{color:var(--ink2);line-height:1.9;font-size:14.5px}
+.fpanel ul{margin-top:16px;list-style:none;display:grid;gap:10px}
+.fpanel li{display:flex;gap:9px;font-size:14px;color:var(--ink2)}
+.fpanel li::before{content:'✓';color:var(--green);font-weight:800}
+.shot{border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(20,26,46,.13);cursor:zoom-in;transition:.25s}
+.shot:hover{transform:translateY(-4px) scale(1.01);box-shadow:0 26px 70px rgba(20,26,46,.18)}
+.shot img{width:100%}
+@media(max-width:880px){.fpanel{grid-template-columns:1fr}}
+
+/* ---- steps ---- */
+.steps{display:flex;gap:0;justify-content:center;margin-bottom:34px;flex-wrap:wrap}
+.step-tab{flex:1;max-width:220px;padding:16px 12px;text-align:center;cursor:pointer;position:relative;color:var(--ink3);border-bottom:3px solid var(--border);transition:.2s}
+.step-tab b{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--bg-soft);border:1px solid var(--border);margin-bottom:8px;font-size:13px;transition:.2s}
+.step-tab span{display:block;font-size:13.5px;font-weight:600}
+.step-tab.on{color:var(--ink);border-color:var(--primary)}
+.step-tab.on b{background:var(--primary);border-color:var(--primary);color:#fff}
+.spanel{display:none;grid-template-columns:1fr 1.2fr;gap:44px;align-items:center;animation:fadeUp .4s ease}
+.spanel.on{display:grid}
+.spanel .num{font-size:13px;font-weight:800;color:var(--primary);letter-spacing:2px}
+.spanel h3{font-size:22px;margin:8px 0 12px}
+.spanel p{color:var(--ink2);line-height:1.9;font-size:14.5px}
+.spanel .tip{margin-top:16px;padding:12px 15px;background:var(--bg-soft);border-radius:10px;font-size:13px;color:var(--ink2);border-left:3px solid var(--primary)}
+@media(max-width:880px){.spanel{grid-template-columns:1fr}}
+
+/* ---- install ---- */
+.install{background:var(--ink);color:#e8ecfa;border-radius:24px;padding:56px 44px;position:relative;overflow:hidden}
+.install::before{content:'';position:absolute;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(79,110,247,.25),transparent 70%);top:-160px;right:-100px}
+.install .sec-head h2{color:#fff}
+.install .sec-head p{color:#9aa3c0}
+.itabs{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:20px;position:relative}
+.itab{padding:9px 17px;border-radius:9px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:#c6cdec;cursor:pointer;font-size:13.5px;font-weight:600;transition:.15s}
+.itab.on{background:var(--primary);border-color:var(--primary);color:#fff}
+.ipane{display:none;position:relative}
+.ipane.on{display:block}
+.term{background:#0c1122;border:1px solid rgba(255,255,255,.1);border-radius:14px;overflow:hidden}
+.term-bar{display:flex;align-items:center;gap:7px;padding:11px 15px;border-bottom:1px solid rgba(255,255,255,.08)}
+.term-bar i{width:11px;height:11px;border-radius:50%;display:inline-block}
+.term-bar .r{background:#ff5f57}.term-bar .y{background:#febc2e}.term-bar .g{background:#28c840}
+.term-bar span{margin-left:8px;font-size:12px;color:#8a92a6}
+.term pre{padding:18px 20px;font-family:ui-monospace,'Cascadia Code',Consolas,monospace;font-size:13.5px;line-height:1.9;color:#d7e2ff;overflow-x:auto;white-space:pre-wrap;word-break:break-all}
+.term pre .cm{color:#5f6b8f}
+.copy{position:absolute;top:56px;right:14px;padding:6px 13px;font-size:12px;border-radius:7px;background:rgba(255,255,255,.1);color:#c6cdec;border:1px solid rgba(255,255,255,.14);cursor:pointer;transition:.15s}
+.copy:hover{background:var(--primary);color:#fff}
+.inote{margin-top:14px;font-size:13px;color:#9aa3c0;line-height:1.9;position:relative}
+.inote a{color:#8fa7ff}
+
+/* ---- ports ---- */
+.pgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:13px}
+.pcard{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:17px 16px;text-align:center;transition:.18s;cursor:default}
+.pcard:hover{transform:translateY(-3px);border-color:var(--primary);box-shadow:0 10px 26px rgba(79,110,247,.14)}
+.pcard b{display:block;font-size:17px;color:var(--primary)}
+.pcard span{font-size:12.5px;color:var(--ink2);display:block;margin-top:5px}
+.pcard em{font-style:normal;font-size:11px;color:var(--ink3);display:block;margin-top:3px}
+
+/* ---- languages ---- */
+.lgrid{display:flex;gap:11px;flex-wrap:wrap;justify-content:center}
+.lchip{padding:11px 21px;border-radius:12px;border:1px solid var(--border);background:var(--card);cursor:pointer;font-size:14.5px;font-weight:600;color:var(--ink2);transition:.16s}
+.lchip:hover{transform:translateY(-2px);border-color:var(--primary);color:var(--primary)}
+.lchip.on{background:var(--primary);border-color:var(--primary);color:#fff}
+.lhello{text-align:center;margin-top:26px;font-size:clamp(20px,3vw,30px);font-weight:800;letter-spacing:-.4px;min-height:44px;color:var(--ink);transition:.25s}
+.lhello small{display:block;font-size:13px;color:var(--ink3);font-weight:500;margin-top:7px}
+.rtl-note{text-align:center;margin-top:10px;font-size:12.5px;color:var(--ink3)}
+
+/* ---- compare table ---- */
+.ctable{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.ctable th,.ctable td{padding:13px 16px;border-bottom:1px solid var(--border);text-align:left}
+.ctable th{background:var(--bg-soft);font-size:12px;color:var(--ink3);letter-spacing:.5px}
+.ctable tr:last-child td{border-bottom:none}
+.ctable tr:hover td{background:var(--bg-soft)}
+.ctable .hl{color:var(--primary);font-weight:700}
+
+/* ---- faq ---- */
+.faq{max-width:720px;margin:0 auto}
+.qa{border:1px solid var(--border);border-radius:12px;background:var(--card);margin-bottom:11px;overflow:hidden}
+.qa button{width:100%;text-align:left;padding:16px 19px;border:none;background:none;font-size:14.5px;font-weight:600;color:var(--ink);cursor:pointer;display:flex;justify-content:space-between;gap:10px}
+.qa button::after{content:'+';font-size:18px;color:var(--ink3);transition:.2s}
+.qa.open button::after{content:'−'}
+.qa .a{max-height:0;overflow:hidden;transition:max-height .28s ease}
+.qa.open .a{max-height:300px}
+.qa .a p{padding:0 19px 17px;color:var(--ink2);font-size:13.5px;line-height:1.9}
+.qa .a code{background:var(--bg-soft);padding:2px 7px;border-radius:5px;font-size:12px}
+
+/* ---- cta ---- */
+.bigcta{text-align:center;background:linear-gradient(135deg,var(--primary),var(--primary2));border-radius:24px;padding:64px 30px;color:#fff;position:relative;overflow:hidden}
+.bigcta::before{content:'';position:absolute;width:300px;height:300px;border-radius:50%;background:rgba(255,255,255,.12);top:-110px;right:-60px}
+.bigcta h2{font-size:clamp(24px,3.4vw,34px);position:relative}
+.bigcta p{margin-top:13px;opacity:.92;font-size:15px;position:relative}
+.bigcta .btn{margin-top:26px;background:#fff;color:var(--primary);position:relative}
+.bigcta .btn:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(0,0,0,.2)}
+
+/* ---- footer ---- */
+footer{border-top:1px solid var(--border);padding:34px 0 30px;margin-top:76px}
+.foot-inner{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.foot-inner .brand{display:flex;align-items:center;gap:8px;font-weight:800}
+.foot-links{margin-left:auto;display:flex;gap:18px;font-size:13.5px}
+.foot-links a{color:var(--ink2)}
+.foot-links a:hover{color:var(--primary)}
+.footer-credit{font-size:12.5px;color:var(--ink3)}
+.footer-credit a{color:var(--ink2);font-weight:700;border-bottom:1px dashed var(--border)}
+.footer-credit a:hover{color:var(--primary);border-color:var(--primary)}
+
+/* ---- lightbox & toast ---- */
+#lightbox{position:fixed;inset:0;background:rgba(8,11,24,.86);z-index:900;display:none;align-items:center;justify-content:center;padding:30px;cursor:zoom-out}
+#lightbox.on{display:flex}
+#lightbox img{max-width:min(1200px,94vw);max-height:88vh;border-radius:14px;box-shadow:0 30px 90px rgba(0,0,0,.5)}
+#copytoast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-60px);background:var(--ink);color:#fff;padding:10px 22px;border-radius:10px;font-size:13.5px;z-index:999;transition:.25s;pointer-events:none}
+#copytoast.on{transform:translateX(-50%) translateY(0)}
+.reveal{opacity:0;transform:translateY(22px);transition:.6s ease}
+.reveal.vis{opacity:1;transform:none}
+</style>
+</head>
+<body>
+
+<!-- 导航 -->
+<div class="nav"><div class="wrap nav-inner">
+  <a class="logo" href="#top"><svg width="28" height="28" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="#4f6ef7"/><path d="M22 32 L50 56 L78 32" stroke="white" stroke-width="9" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="22" y="30" width="56" height="40" rx="8" stroke="white" stroke-width="7" fill="none"/></svg>OpenMail</a>
+  <div class="nav-links">
+    <a href="#features">功能特性</a><a href="#quickstart">快速上手</a><a href="#install">安装部署</a><a href="#langs">10 种语言</a><a href="#faq">常见问题</a>
+  </div>
+  <a class="btn btn-p btn-sm" href="#install" style="margin-left:14px">🚀 安装 OpenMail</a>
+</div></div>
+
+<!-- Hero -->
+<header class="hero" id="top"><div class="wrap hero-inner">
+  <div class="hero-badges"><span>开源 MIT</span><span>单进程架构</span><span>零原生依赖</span><span>10 种界面语言</span></div>
+  <h1>一个进程，跑起你的<br><em>完整邮件系统</em></h1>
+  <p class="sub">SMTP / IMAP / POP3 全协议 · 三栏 Webmail · AI 帮写与翻译 · 邮件模板 · 多域名 DKIM · 反垃圾评分 · 2FA 与审计。安装完成即拥有属于自己的 Gmail 级体验。</p>
+  <div class="hero-cta">
+    <a class="btn btn-p" href="https://github.com/chenyuwebwawa/OpenMail#安装方式" target="_blank" rel="noopener">⚡ 一键安装（GitHub）</a>
+    <a class="btn btn-g" href="#install">📋 查看安装方式</a>
+  </div>
+  <div class="hero-note">完全免费开源 · 数据 100% 存在自己的服务器 · <a href="/app/">已有部署？进入邮箱 →</a></div>
+  <div class="hero-typing">OpenMail speaks <b id="typing"></b><span id="cursor">|</span></div>
+  <div class="hero-stats">
+    <div class="hstat"><b>1</b><span>个进程跑全部服务</span></div>
+    <div class="hstat"><b>8</b><span>项邮件协议端口</span></div>
+    <div class="hstat"><b>10</b><span>种界面语言</span></div>
+    <div class="hstat"><b>98</b><span>项自动化测试</span></div>
+    <div class="hstat"><b>4</b><span>种安装方式</span></div>
+  </div>
+</div></header>
+
+<!-- 功能特性 -->
+<section id="features"><div class="wrap">
+  <div class="sec-head reveal"><span class="eyebrow">Features</span><h2>不只是能收发，而是真的好用</h2><p>点击下方标签，直观查看每一项能力的真实界面截图（点击截图可放大）。</p></div>
+  <div class="ftabs reveal" id="ftabs"></div>
+  <div id="fpanels"></div>
+</div></section>
+
+<!-- 快速上手 -->
+<section id="quickstart" style="background:var(--bg-soft)"><div class="wrap">
+  <div class="sec-head reveal"><span class="eyebrow">Get Started</span><h2>四步上手，两分钟看完</h2><p>按顺序点击步骤，跟着截图走一遍，你就已经会用 OpenMail 了。</p></div>
+  <div class="steps reveal" id="stabs"></div>
+  <div id="spanels"></div>
+</div></section>
+
+<!-- 安装 -->
+<section id="install"><div class="wrap">
+  <div class="install reveal">
+    <div class="sec-head"><span class="eyebrow" style="color:#8fa7ff">Install</span><h2>选择你的安装方式</h2><p>一键脚本 / Docker / 宝塔·1Panel / 手动 —— 都只需要几分钟。</p></div>
+    <div class="itabs" id="itabs"></div>
+    <div id="ipanes"></div>
+  </div>
+</div></section>
+
+<!-- 端口 -->
+<section><div class="wrap">
+  <div class="sec-head reveal"><span class="eyebrow">Protocols</span><h2>完整邮件协议栈</h2><p>生产环境直接映射标准端口；开发环境自动使用高位端口避免权限问题。</p></div>
+  <div class="pgrid reveal">
+    <div class="pcard"><b>SMTP :25</b><span>服务器间收信（MX）</span><em>开发端口 2525</em></div>
+    <div class="pcard"><b>Submission :587</b><span>用户发信 · SASL 认证</span><em>开发端口 2587</em></div>
+    <div class="pcard"><b>SMTPS :465</b><span>隐式 TLS 发信</span><em>开发端口 2546</em></div>
+    <div class="pcard"><b>IMAP :143 / 993</b><span>邮件拉取 / TLS</span><em>开发端口 1143 / 1993</em></div>
+    <div class="pcard"><b>POP3 :110 / 995</b><span>邮件下载 / TLS</span><em>开发端口 1110 / 1995</em></div>
+    <div class="pcard"><b>HTTP :3000</b><span>Webmail · 管理后台 · API</span><em>可 Nginx 反代 443</em></div>
+  </div>
+</div></section>
+
+<!-- 语言 -->
+<section id="langs" style="background:var(--bg-soft)"><div class="wrap">
+  <div class="sec-head reveal"><span class="eyebrow">Languages</span><h2>10 种界面语言 · 阿拉伯语自动 RTL</h2><p>内置中文与英文，其余 8 种以语言包提供，管理后台一键安装。点击下方语言试试问候语。</p></div>
+  <div class="lgrid reveal" id="lgrid"></div>
+  <div class="lhello" id="lhello">你好，世界 <small>中文（简体）</small></div>
+  <div class="rtl-note reveal">🡒 العربية 与 اردو 会将整个界面镜像为从右向左（RTL）布局</div>
+</div></section>
+
+<!-- 对比 -->
+<section><div class="wrap">
+  <div class="sec-head reveal"><span class="eyebrow">Why OpenMail</span><h2>和其他自托管方案比一比</h2></div>
+  <div class="reveal" style="overflow-x:auto">
+  <table class="ctable">
+    <thead><tr><th>方案</th><th>架构</th><th>AI 助手 / 模板</th><th>多语言界面</th><th>上手成本</th><th>资源要求</th></tr></thead>
+    <tbody>
+      <tr><td class="hl">OpenMail</td><td>单进程 Node.js + SQLite</td><td class="hl">✓ 内置（帮写/翻译/分析/模板）</td><td class="hl">10 种 · 含 RTL</td><td class="hl">一键脚本 / Docker</td><td>512MB 起</td></tr>
+      <tr><td>mailcow</td><td>Docker 十余容器</td><td>✗</td><td>依赖组件</td><td>中等</td><td>6GB RAM</td></tr>
+      <tr><td>Mailu</td><td>Docker 多容器</td><td>✗</td><td>部分</td><td>中等</td><td>1–3GB RAM</td></tr>
+      <tr><td>Postfix+Dovecot</td><td>多进程手动拼装</td><td>✗</td><td>✗</td><td>高</td><td>按需</td></tr>
+      <tr><td>宝塔邮局</td><td>Postfix+Dovecot 插件</td><td>✗</td><td>中文</td><td>低（需处理冲突）</td><td>2GB RAM</td></tr>
+    </tbody>
+  </table>
+  </div>
+</div></section>
+
+<!-- FAQ -->
+<section id="faq" style="background:var(--bg-soft)"><div class="wrap">
+  <div class="sec-head reveal"><span class="eyebrow">FAQ</span><h2>常见问题</h2></div>
+  <div class="faq reveal" id="faqbox"></div>
+</div></section>
+
+<!-- CTA -->
+<section><div class="wrap"><div class="bigcta reveal">
+  <h2>现在，拥有完全属于你的邮箱</h2>
+  <p>数据在自己服务器上 · 界面讲你的语言 · AI 帮你写信</p>
+  <a class="btn" href="/app/">进入 OpenMail →</a>
+</div></div></section>
+
+<footer><div class="wrap foot-inner">
+  <span class="brand"><svg width="22" height="22" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="#4f6ef7"/><path d="M22 32 L50 56 L78 32" stroke="white" stroke-width="9" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="22" y="30" width="56" height="40" rx="8" stroke="white" stroke-width="7" fill="none"/></svg>OpenMail</span>
+  <span style="font-size:12.5px;color:var(--ink3)">开源邮件服务器套件 · MIT License</span>
+  <div class="foot-links">
+    <a href="/app/">进入邮箱</a><a href="https://github.com/chenyuwebwawa/OpenMail" target="_blank" rel="noopener">GitHub</a><a href="#install">安装</a>
+  </div>
+  <span class="footer-credit">©辰语 2026 Developed by <a href="https://jouaaaaa.top/" target="_blank" rel="noopener noreferrer">JOUaaaaa</a></span>
+</div></footer>
+
+<!-- 灯箱 -->
+<div id="lightbox"><img id="lightbox-img" alt="screenshot"></div>
+<div id="copytoast">已复制到剪贴板 ✓</div>
+
+<script>
+/* ---------- 数据 ---------- */
+const FEATURES = [
+  { icon:'📮', name:'三栏收发', title:'收发管理，一屏搞定', img:'/screenshots/inbox.png',
+    desc:'文件夹树 + 邮件列表 + 预览窗的三栏布局，支持会话线程聚合、全文搜索、星标未读过滤，邮件可直接拖拽到文件夹批量整理。',
+    points:['会话线程自动聚合','批量已读/星标/移动/删除','一键归档已读邮件','拖拽整理自定义文件夹'] },
+  { icon:'📎', name:'附件与写信', title:'富文本写信，截图直接粘贴', img:'/screenshots/compose.png',
+    desc:'内置富文本编辑器（加粗/列表/引用/代码块/颜色），收件人自动补全，拖拽或点击上传附件，Ctrl+V 粘贴截图直接插入正文，还支持定时发送与服务端草稿自动保存。',
+    points:['收件人 chip 输入 + 自动补全','粘贴截图即插即发','定时发送调度器','12 秒自动保存草稿'] },
+  { icon:'✨', name:'AI 助手', title:'AI 帮你写信、翻译、分析', img:'/screenshots/ai-compose.png',
+    desc:'在设置里配置任意 OpenAI 兼容接口（Base URL + 模型 + API Key），即可在写信时「帮写邮件」、一键翻译整封邮件、阅读时 AI 分析摘要/要点/待办与回复建议。API Key 加密存储在服务器。',
+    points:['帮写邮件：描述需求即出成稿','翻译邮件：12 种目标语言','AI 分析：摘要 / 要点 / 待办','兼容 OpenAI / DeepSeek / GLM / Ollama'] },
+  { icon:'🧩', name:'邮件模板', title:'常用邮件一键复用', img:'/screenshots/compose.png',
+    desc:'把常用邮件保存为模板：手动创建、导入现成 HTML 模板文件，或描述需求让 AI 直接生成完整 HTML 模板。写信时一键插入主题与正文。',
+    points:['模板库管理与分类来源标记','导入 .html 文件','AI 生成品牌风格 HTML 模板','写信窗一键插入'] },
+  { icon:'🛡️', name:'管理后台', title:'域名 DKIM 可视化治理', img:'/screenshots/admin-dashboard.png',
+    desc:'仪表盘实时统计与 14 天收发趋势图；用户封禁/配额/角色；域名添加即自动生成 DKIM 密钥并给出可复制的 DNS 记录；别名、Catch-all、外发队列、审计日志一应俱全。',
+    points:['DKIM 密钥自动生成','DNS 配置一键复制','用户配额与封禁','全局黑名单 + 操作审计'] },
+  { icon:'🌍', name:'十种语言', title:'全世界都能用', img:'/screenshots/lang-ar-mail.png',
+    desc:'界面支持中文、英文、法语、西班牙语、葡萄牙语、俄语、阿拉伯语、印地语、孟加拉语、乌尔都语共 10 种语言，阿拉伯语与乌尔都语自动切换为从右向左的 RTL 布局。',
+    points:['设置中一键切换','RTL 自动镜像','语言包独立分发','词条自动回退英文'] },
+];
+const STEPS = [
+  { n:1, name:'登录', title:'打开邮箱，登录账号', img:'/screenshots/login.png',
+    desc:'浏览器打开服务器地址，输入邮箱和密码登录。开启了两步验证的账号会进入 6 位动态码页面（支持 Google Authenticator 扫码绑定）。没有账号？登录页可自助注册。',
+    tip:'首次安装后，管理员账号密码打印在服务器 data/admin-credentials.txt 中。' },
+  { n:2, name:'写一封信', title:'写信、加附件、用模板', img:'/screenshots/compose.png',
+    desc:'点击「写邮件」，收件人输入即自动补全；正文支持富文本与粘贴截图；点击「邮件模板」可一键插入保存好的模板，或「导入 HTML」使用现成设计。',
+    tip:'点「定时发送」输入时间，到点自动发出 —— 适合跨时区协作。' },
+  { n:3, name:'AI 助手', title:'让 AI 帮你写信和翻译', img:'/screenshots/ai-compose.png',
+    desc:'在「设置 → AI 助手」配置 OpenAI 兼容接口后，写信窗点击 AI：描述需求直接生成整封邮件；或把当前正文一键翻译成 12 种语言。阅读邮件时可 AI 分析摘要、要点与待办。',
+    tip:'兼容 OpenAI / DeepSeek / 智谱 GLM / Moonshot / 本地 Ollama 等任何 OpenAI 格式接口。' },
+  { n:4, name:'管理后台', title:'加域名、配 DNS、管用户', img:'/screenshots/admin-dns.png',
+    desc:'管理员进入管理后台：添加域名自动生成 DKIM 密钥，「DNS 配置」给出全部记录并一键复制；用户管理支持配额、角色与封禁；外发队列与审计日志随时可查。',
+    tip:'把 SPF 从 ~all 观察一周后收紧为 -all，送达率更稳。' },
+];
+const INSTALLS = [
+  { name:'一键脚本（推荐）', note:'适用于全新 Linux 服务器：自动安装 Node 22、注册 systemd 服务、预装全部语言包，结束后打印管理员密码。国内网络 404 时脚本会自动切换 jsDelivr 镜像与 git clone 回退。',
+    code:`# 远程一键安装（root）
+curl -fsSL https://raw.githubusercontent.com/chenyuwebwawa/OpenMail/main/install.sh | bash
+
+# 国内网络 404/超时？用 jsDelivr 镜像：
+curl -fsSL https://cdn.jsdelivr.net/gh/chenyuwebwawa/OpenMail@main/install.sh | bash
+
+# 带参数：指定域名并使用标准邮件端口
+bash install.sh --domain example.com --standard-ports` },
+  { name:'Docker', note:'适合有 Docker / 1Panel 的服务器。先配置 .env，再启动；或使用单条 docker run 命令。',
+    code:`git clone https://github.com/chenyuwebwawa/OpenMail.git && cd OpenMail
+cp .env.example .env      # 编辑域名 / 中继 / TLS 配置
+docker compose up -d
+
+# 或单命令运行：
+docker run -d --name openmail -p 3000:3000 -p 25:25 -p 587:587 \\
+  -p 465:465 -p 143:143 -p 993:993 -p 110:110 -p 995:995 \\
+  -v openmail-data:/app/data -v openmail-files:/app/files \\
+  -e OM_PRIMARY_DOMAIN=example.com chenyuwebwawa/openmail:latest` },
+  { name:'宝塔 / 1Panel', note:'宝塔用户推荐先用适配脚本处理与「宝塔邮局」的端口冲突，再按指南配置反向代理站点与 SSL。完整手把手教程见 docs/panels/ 目录。',
+    code:`# 宝塔服务器一键适配（自动检测端口冲突 / 可接管宝塔邮局）
+bash <(curl -fsSL https://raw.githubusercontent.com/chenyuwebwawa/OpenMail/main/scripts/baota-adapt.sh)
+
+# 国内 404 时：
+git clone https://github.com/chenyuwebwawa/OpenMail.git /opt/openmail
+cd /opt/openmail && bash scripts/baota-adapt.sh --standard-ports
+
+# 宝塔内最后两步：
+#   网站 → 添加站点(mail.你的域名) → 反向代理 → http://127.0.0.1:3000
+#   站点 SSL → Let's Encrypt 申请证书 → 填入 .env 的 OM_TLS_CERT/KEY` },
+  { name:'手动安装', note:'任何有 Node.js ≥ 22.5 的机器（含 Windows）。零原生依赖，不需要编译工具。',
+    code:`git clone https://github.com/chenyuwebwawa/OpenMail.git
+cd OpenMail
+npm install
+npm start
+
+# Windows 可直接双击 start-windows.bat
+# 首次启动后打开 http://localhost:3000` },
+];
+const FAQS = [
+  ['为什么选择单进程架构？','OpenMail 用一个 Node.js 进程同时提供 SMTP/IMAP/POP3/HTTP 全部服务，数据存 SQLite。没有 MySQL、Redis、十几个容器要维护 —— 备份就是拷一个文件，部署就是一条命令。'],
+  ['AI 功能安全吗？密钥存在哪里？','AI 配置的 API Key 使用 AES-256-GCM 加密后存放在服务器本地 SQLite 中，所有 AI 请求由服务端代理转发，Key 永不下发到浏览器。你使用自选的 OpenAI 兼容服务，数据发送范围由你控制。'],
+  ['云服务器收不到邮件？','入站检查云安全组是否放行 25 端口；出站方面国内云普遍封 25，请在 .env 配置 OM_RELAY_* 上游中继，或使用海外 VPS。详见 docs/DNS-Guide.md。'],
+  ['和宝塔邮局冲突吗？','两者都是完整邮件服务器，不能同时占用 25 端口。运行 scripts/baota-adapt.sh 会自动检测并可一键停用宝塔邮局由 OpenMail 接管；也提供共存模式（高位端口 + 子域名打通），见 docs/panels/BAOTA-COEXIST.md。'],
+  ['如何迁移/备份？','管理后台可一键下载 SQLite 快照，附件目录 files/ 直接 rsync。恢复 = 停服务 → 放回两个目录 → 启动。'],
+];
+const HELLOS = [
+  ['🇨🇳 简体中文','你好，世界'],['🇬🇧 English','Hello, World'],['🇫🇷 Français','Bonjour, le monde'],
+  ['🇪🇸 Español','Hola, Mundo'],['🇵🇹 Português','Olá, Mundo'],['🇷🇺 Русский','Привет, мир'],
+  ['🇸🇦 العربية','مرحبا بالعالم'],['🇮🇳 हिन्दी','नमस्ते दुनिया'],['🇧🇩 বাংলা','হ্যালো বিশ্ব'],['🇵🇰 اردو','ہیلو دنیا'],
+];
+
+/* ---------- 特性 tabs ---------- */
+const ftabs = document.getElementById('ftabs'), fpanels = document.getElementById('fpanels');
+FEATURES.forEach((f, i) => {
+  const b = document.createElement('button');
+  b.className = 'ftab' + (i === 0 ? ' on' : '');
+  b.textContent = f.icon + ' ' + f.name;
+  b.onclick = () => { [...ftabs.children].forEach(x => x.classList.remove('on')); b.classList.add('on'); showF(i); };
+  ftabs.appendChild(b);
+  const p = document.createElement('div');
+  p.className = 'fpanel' + (i === 0 ? ' on' : '');
+  p.innerHTML = `
+    <div><h3>${f.title}</h3><p>${f.desc}</p><ul>${f.points.map(x => `<li>${x}</li>`).join('')}</ul></div>
+    <div class="shot" data-zoom="${f.img}"><img src="${f.img}" alt="${f.name}" loading="lazy"></div>`;
+  fpanels.appendChild(p);
+});
+function showF(i) { [...fpanels.children].forEach((p, j) => p.classList.toggle('on', i === j)); }
+let fAuto = setInterval(() => { const next = ([...ftabs.children].findIndex(x => x.classList.contains('on')) + 1) % FEATURES.length; ftabs.children[next].click(); }, 5200);
+ftabs.addEventListener('click', () => clearInterval(fAuto));
+
+/* ---------- 步骤 ---------- */
+const stabs = document.getElementById('stabs'), spanels = document.getElementById('spanels');
+STEPS.forEach((s, i) => {
+  const b = document.createElement('div');
+  b.className = 'step-tab' + (i === 0 ? ' on' : '');
+  b.innerHTML = `<b>${s.n}</b><span>${s.name}</span>`;
+  b.onclick = () => { [...stabs.children].forEach(x => x.classList.remove('on')); b.classList.add('on'); showS(i); };
+  stabs.appendChild(b);
+  const p = document.createElement('div');
+  p.className = 'spanel' + (i === 0 ? ' on' : '');
+  p.innerHTML = `
+    <div><div class="num">STEP ${s.n} / 4</div><h3>${s.title}</h3><p>${s.desc}</p><div class="tip">💡 ${s.tip}</div></div>
+    <div class="shot" data-zoom="${s.img}"><img src="${s.img}" alt="step ${s.n}" loading="lazy"></div>`;
+  spanels.appendChild(p);
+});
+function showS(i) { [...spanels.children].forEach((p, j) => p.classList.toggle('on', i === j)); }
+
+/* ---------- 安装 tabs ---------- */
+const itabs = document.getElementById('itabs'), ipanes = document.getElementById('ipanes');
+INSTALLS.forEach((ins, i) => {
+  const b = document.createElement('button');
+  b.className = 'itab' + (i === 0 ? ' on' : '');
+  b.textContent = ins.name;
+  b.onclick = () => { [...itabs.children].forEach(x => x.classList.remove('on')); b.classList.add('on'); showI(i); };
+  itabs.appendChild(b);
+  const p = document.createElement('div');
+  p.className = 'ipane' + (i === 0 ? ' on' : '');
+  p.innerHTML = `
+    <div class="term">
+      <div class="term-bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>${ins.name}</span></div>
+      <pre>${ins.code.replace(/</g,'&lt;')}</pre>
+    </div>
+    <button class="copy" data-code-i="${i}">复制</button>
+    <div class="inote">${ins.note}</div>`;
+  ipanes.appendChild(p);
+});
+function showI(i) { [...ipanes.children].forEach((p, j) => p.classList.toggle('on', i === j)); }
+document.getElementById('install').addEventListener('click', (e) => {
+  const btn = e.target.closest('.copy');
+  if (!btn) return;
+  const code = INSTALLS[+btn.dataset.codeI].code;
+  navigator.clipboard.writeText(code).then(() => {
+    const t = document.getElementById('copytoast');
+    t.classList.add('on');
+    setTimeout(() => t.classList.remove('on'), 1400);
+  });
+});
+
+/* ---------- 语言墙 ---------- */
+const lgrid = document.getElementById('lgrid'), lhello = document.getElementById('lhello');
+HELLOS.forEach(([name, hello], i) => {
+  const b = document.createElement('button');
+  b.className = 'lchip' + (i === 0 ? ' on' : '');
+  b.textContent = name;
+  b.onclick = () => { [...lgrid.children].forEach(x => x.classList.remove('on')); b.classList.add('on');
+    lhello.style.opacity = 0;
+    setTimeout(() => { lhello.innerHTML = `${hello}<small>${name.replace(/^[^ ]+ /,'')}</small>`; lhello.style.opacity = 1; }, 180); };
+  lgrid.appendChild(b);
+});
+
+/* ---------- FAQ ---------- */
+const faqbox = document.getElementById('faqbox');
+FAQS.forEach(([q, a]) => {
+  const d = document.createElement('div');
+  d.className = 'qa';
+  d.innerHTML = `<button>${q}</button><div class="a"><p>${a}</p></div>`;
+  d.querySelector('button').onclick = () => {
+    const was = d.classList.contains('open');
+    [...faqbox.children].forEach(x => x.classList.remove('open'));
+    if (!was) d.classList.add('open');
+  };
+  faqbox.appendChild(d);
+});
+faqbox.children[0].classList.add('open');
+
+/* ---------- 灯箱 ---------- */
+const lb = document.getElementById('lightbox'), lbImg = document.getElementById('lightbox-img');
+document.addEventListener('click', (e) => {
+  const shot = e.target.closest('[data-zoom]');
+  if (shot) { lbImg.src = shot.dataset.zoom; lb.classList.add('on'); }
+  else if (e.target === lb) lb.classList.remove('on');
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') lb.classList.remove('on'); });
+
+/* ---------- 打字机 ---------- */
+const words = HELLOS.map(h => h[1]);
+let wi = 0, ci = 0, del = false;
+const typing = document.getElementById('typing');
+(function type() {
+  const w = words[wi];
+  typing.textContent = w.slice(0, ci);
+  if (!del && ci < w.length) { ci++; setTimeout(type, 90); }
+  else if (!del) { del = true; setTimeout(type, 1600); }
+  else if (ci > 0) { ci--; setTimeout(type, 40); }
+  else { del = false; wi = (wi + 1) % words.length; setTimeout(type, 300); }
+})();
+setInterval(() => { document.getElementById('cursor').style.visibility = document.getElementById('cursor').style.visibility === 'hidden' ? 'visible' : 'hidden'; }, 500);
+
+/* ---------- 滚动显现 ---------- */
+const io = new IntersectionObserver(es => es.forEach(x => { if (x.isIntersecting) { x.target.classList.add('vis'); io.unobserve(x.target); } }), { threshold: .12 });
+document.querySelectorAll('.reveal').forEach(x => io.observe(x));
+
+/* ---------- 旧链接兼容：/#/xxx → /app/#/xxx ---------- */
+if (location.hash.startsWith('#/')) location.replace('/app/' + location.hash);
+</script>
+</body>
+</html>
