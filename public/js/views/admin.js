@@ -245,7 +245,7 @@ async function domainsView(el) {
         <div class="field" style="max-width:320px"><label>${t('dom.dns_ip')}</label>
           <input class="input" id="dns-ip" value="" placeholder="${t('dom.ip_ph')}"></div>
         <div id="dns-records"><div class="spinner"></div></div>`,
-      footer: `<button class="btn" data-close>${t('dom.close')}</button>`,
+      footer: `<button class="btn btn-primary" id="dns-check">${icon('refresh')} ${t('dom.check_btn')}</button><button class="btn" data-close>${t('dom.close')}</button>`,
     });
     const loadDns = async () => {
       const box = dnsModal.el.querySelector('#dns-records');
@@ -271,8 +271,6 @@ async function domainsView(el) {
         }));
       } catch (e) { box.innerHTML = `<div class="empty-state">${icon('alert')}<div>${esc(e.message)}</div></div>`; }
     };
-      footer: `<button class="btn btn-primary" id="dns-check">${icon('refresh')} ${t('dom.check_btn')}</button><button class="btn" data-close>${t('dom.close')}</button>`,
-    });
     const renderResults = (r) => {
       const box = dnsModal.el.querySelector('#dns-records');
       const fails = r.results.filter(x => !x.ok);
