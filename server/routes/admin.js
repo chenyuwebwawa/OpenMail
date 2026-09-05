@@ -353,6 +353,7 @@ router.get('/admin/settings', (req, res) => {
   res.json({
     siteName: getSetting('site_name', config.siteName),
     registration: getSetting('registration', String(config.registrationEnabled)) === 'true',
+    maxAttachmentMB: Math.max(1, parseInt(getSetting('max_attachment_mb', '25')) || 25),
     relay: { configured: !!config.relay.host, host: config.relay.host, port: config.relay.port },
     smtp: {
       mxPort: config.smtpPort, submissionPort: config.submissionPort,
@@ -367,6 +368,10 @@ router.put('/admin/settings', (req, res) => {
   if (b.siteName !== undefined) setSetting('site_name', b.siteName);
   if (b.registration !== undefined) setSetting('registration', String(!!b.registration));
   if (b.adminCode !== undefined) setSetting('admin_code', b.adminCode);
+  if (b.maxAttachmentMB !== undefined) {
+    const mb = Math.min(2048, Math.max(1, parseInt(b.maxAttachmentMB) || 25));
+    setSetting('max_attachment_mb', String(mb));
+  }
   audit(null, 'admin', 'admin.settings', '更新系统设置');
   res.json({ ok: true });
 });

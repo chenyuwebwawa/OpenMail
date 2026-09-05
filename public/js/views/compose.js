@@ -140,11 +140,41 @@ export function openCompose(opts = {}) {
   // ---- 发送 / 定时 ----
   el.querySelector('#c-send').addEventListener('click', () => doSend());
   el.querySelector('#c-schedule').addEventListener('click', () => {
-    const s = prompt(t('compose.sched_prompt'));
-    if (!s) return;
-    const ts = new Date(s.replace(' ', 'T') + ':00').getTime();
-    if (isNaN(ts) || ts < Date.now()) return toast(t('compose.sched_invalid'), 'err');
-    doSend(ts);
+    const m = modal({
+      title: t('compose.schedule'),
+      body: `
+        <div class="sched-grid">
+          <button class="btn sched-opt" data-ts="1h">${icon('clock')} ${t('compose.sched_1h')}</button>
+          <button class="btn sched-opt" data-ts="tom8">${icon('clock')} ${t('compose.sched_tom8')}</button>
+          <button class="btn sched-opt" data-ts="tom20">${icon('clock')} ${t('compose.sched_tom20')}</button>
+          <button class="btn sched-opt" data-ts="mon8">${icon('clock')} ${t('compose.sched_mon8')}</button>
+        </div>
+        <div class="field" style="margin-top:16px"><label>${t('compose.sched_custom')}</label>
+          <input class="input" type="datetime-local" id="sched-custom">
+        </div>
+        <button class="btn btn-primary" style="width:100%" id="sched-custom-go">${icon('clock')} ${t('compose.sched_confirm')}</button>
+        <p style="font-size:12px;color:var(--text-3);margin-top:10px">${t('compose.sched_note')}</p>`,
+      footer: `<button class="btn" data-close>${t('contacts.cancel')}</button>`,
+    });
+    const go = (ts) => {
+      if (!ts || ts < Date.now()) return toast(t('compose.sched_invalid'), 'err');
+      m.close();
+      doSend(ts);
+    };
+    const calc = (key) => {
+      const d = new Date();
+      if (key === '1h') return d.getTime() + 3600e3;
+      if (key === 'tom8') { d.setDate(d.getDate() + 1); d.setHours(8, 0, 0, 0); return d.getTime(); }
+      if (key === 'tom20') { d.setDate(d.getDate() + 1); d.setHours(20, 0, 0, 0); return d.getTime(); }
+      if (key === 'mon8') { const day = d.getDay() || 7; d.setDate(d.getDate() + (8 - day)); d.setHours(8, 0, 0, 0); return d.getTime(); }
+      return null;
+    };
+    m.el.querySelectorAll('.sched-opt').forEach(b => b.addEventListener('click', () => go(calc(b.dataset.ts))));
+    m.el.querySelector('#sched-custom-go').addEventListener('click', () => {
+      const v = m.el.querySelector('#sched-custom').value;
+      if (!v) return toast(t('compose.sched_invalid'), 'err');
+      go(new Date(v).getTime());
+    });
   });
   el.querySelector('#c-discard').addEventListener('click', async () => {
     if (draftId && confirm(t('compose.discard_confirm'))) { await API.del('/drafts/' + draftId).catch(() => {}); }
@@ -474,20 +504,48 @@ function quoteBlock(msg) {
 
 function buildToolbar(el, area) {
   const bar = el.querySelector('#ed-toolbar');
-  const cmds = [
-    ['bold', '<b>B</b>', t('compose.toolbar_bold')], ['italic', '<i>I</i>', t('compose.toolbar_italic')], ['underline', '<u>U</u>', t('compose.toolbar_underline')],
-    ['sep'],
-    ['insertUnorderedList', t('compose.toolbar_ul'), t('compose.toolbar_ul')], ['insertOrderedList', t('compose.toolbar_ol'), t('compose.toolbar_ol')],
-    ['formatBlock:h3', t('compose.toolbar_h3'), t('compose.toolbar_h3')],
-    ['formatBlock:blockquote', t('compose.toolbar_quote'), t('compose.toolbar_quote')],
-    ['formatBlock:pre', t('compose.toolbar_code'), t('compose.toolbar_code')],
-    ['sep'],
-    ['foreColor', t('compose.toolbar_color'), t('compose.toolbar_color')], ['removeFormat', t('compose.toolbar_clear'), t('compose.toolbar_clear')],
-    ['createLink', t('compose.toolbar_link'), t('compose.toolbar_link')],
-  ];
-  bar.innerHTML = cmds.map(([c, label, title]) => c === 'sep'
-    ? '<span class="sep"></span>'
-    : `<button type="button" data-cmd="${c}" title="${title}">${label}</button>`).join('');
+  bar.innerHTML = `
+    <button type="button" data-cmd="undo" title="${t('compose.toolbar_undo')}">↶</button>
+    <button type="button" data-cmd="redo" title="${t('compose.toolbar_redo')}">↷</button>
+    <span class="sep"></span>
+    <select class="ed-select" data-font title="${t('compose.toolbar_font')}">
+      <option value="">${t('compose.toolbar_font')}</option>
+      <option value="Arial">Arial</option>
+      <option value="'Times New Roman',serif">Times</option>
+      <option value="Georgia,serif">Georgia</option>
+      <option value="'Courier New',monospace">Courier</option>
+      <option value="'Microsoft YaHei','PingFang SC',sans-serif">${t('compose.font_yahei')}</option>
+      <option value="SimSun,serif">${t('compose.font_simsun')}</option>
+      <option value="KaiTi,STKaiti,serif">${t('compose.font_kaiti')}</option>
+    </select>
+    <select class="ed-select" data-size title="${t('compose.toolbar_size')}">
+      <option value="">${t('compose.toolbar_size')}</option>
+      <option value="1">①</option><option value="2">②</option><option value="3">③</option>
+      <option value="4">④</option><option value="5">⑤</option><option value="6">⑥</option><option value="7">⑦</option>
+    </select>
+    <button type="button" data-cmd="bold" title="${t('compose.toolbar_bold')}"><b>B</b></button>
+    <button type="button" data-cmd="italic" title="${t('compose.toolbar_italic')}"><i>I</i></button>
+    <button type="button" data-cmd="underline" title="${t('compose.toolbar_underline')}"><u>U</u></button>
+    <button type="button" data-cmd="strikeThrough" title="${t('compose.toolbar_strike')}"><s>S</s></button>
+    <span class="sep"></span>
+    <button type="button" data-cmd="insertUnorderedList" title="${t('compose.toolbar_ul')}">• 列表</button>
+    <button type="button" data-cmd="insertOrderedList" title="${t('compose.toolbar_ol')}">1. 列表</button>
+    <button type="button" data-cmd="formatBlock:h3" title="${t('compose.toolbar_h3')}">标题</button>
+    <button type="button" data-cmd="formatBlock:blockquote" title="${t('compose.toolbar_quote')}">❝ 引用</button>
+    <button type="button" data-cmd="formatBlock:pre" title="${t('compose.toolbar_code')}">⌨ 代码</button>
+    <span class="sep"></span>
+    <button type="button" data-cmd="justifyLeft" title="${t('compose.align_left')}">⯇</button>
+    <button type="button" data-cmd="justifyCenter" title="${t('compose.align_center')}">≡</button>
+    <button type="button" data-cmd="justifyRight" title="${t('compose.align_right')}">⯈</button>
+    <button type="button" data-cmd="justifyFull" title="${t('compose.align_justify')}">▤</button>
+    <span class="sep"></span>
+    <button type="button" data-cmd="foreColor" title="${t('compose.toolbar_color')}">🎨 文字色</button>
+    <button type="button" data-cmd="hiliteColor" title="${t('compose.toolbar_hilite')}">🖍 底色</button>
+    <button type="button" data-cmd="insertHorizontalRule" title="${t('compose.toolbar_hr')}">─ 分隔线</button>
+    <button type="button" data-cmd="createLink" title="${t('compose.toolbar_link')}">🔗 链接</button>
+    <button type="button" data-cmd="insertImage" title="${t('compose.toolbar_image')}">🖼 图片</button>
+    <span class="sep"></span>
+    <button type="button" data-cmd="removeFormat" title="${t('compose.toolbar_clear')}">✕ 清除格式</button>`;
 
   bar.querySelectorAll('[data-cmd]').forEach(btn => {
     btn.addEventListener('mousedown', e => e.preventDefault());
@@ -497,9 +555,15 @@ function buildToolbar(el, area) {
       if (cmd === 'foreColor') {
         const color = prompt(t('compose.color_prompt'), '#e5484d');
         if (color) document.execCommand('foreColor', false, color);
+      } else if (cmd === 'hiliteColor') {
+        const color = prompt(t('compose.color_prompt'), '#fff3bf');
+        if (color) document.execCommand('hiliteColor', false, color);
       } else if (cmd === 'createLink') {
         const url = prompt(t('compose.link_prompt'), 'https://');
         if (url) document.execCommand('createLink', false, url);
+      } else if (cmd === 'insertImage') {
+        const url = prompt(t('compose.img_url'), 'https://');
+        if (url) document.execCommand('insertImage', false, url);
       } else if (cmd.startsWith('formatBlock:')) {
         document.execCommand('formatBlock', false, cmd.split(':')[1]);
       } else {
@@ -507,5 +571,19 @@ function buildToolbar(el, area) {
       }
       dirty = true;
     });
+  });
+  bar.querySelector('[data-font]').addEventListener('change', (e) => {
+    if (!e.target.value) return;
+    area.focus();
+    document.execCommand('fontName', false, e.target.value);
+    dirty = true;
+    e.target.value = '';
+  });
+  bar.querySelector('[data-size]').addEventListener('change', (e) => {
+    if (!e.target.value) return;
+    area.focus();
+    document.execCommand('fontSize', false, e.target.value);
+    dirty = true;
+    e.target.value = '';
   });
 }

@@ -471,12 +471,15 @@ async function main() {
   ok('外发队列已记录外部收件人', queueCheck.status === 200 && JSON.stringify(queueCheck.json.queue).includes('external-check.com'), JSON.stringify(queueCheck.json.queue?.slice(0, 2)));
 
   console.log('\n== 17. 官网 / 邮件模板 / AI 配置 ==');
-  const site = await fetch(BASE + '/');
+  const site = await fetch(BASE + '/home');
   const siteHtml = await site.text();
-  ok('官网首页（/）', site.status === 200 && siteHtml.includes('进入邮箱') && siteHtml.includes('JOUaaaaa'));
+  ok('产品官网（/home）', site.status === 200 && siteHtml.includes('进入邮箱') && siteHtml.includes('JOUaaaaa'));
   const appPage = await fetch(BASE + '/app/');
   const appHtml = await appPage.text();
   ok('邮件客户端（/app/）', appPage.status === 200 && appHtml.includes('/js/app.js'));
+  const rootPage = await fetch(BASE + '/');
+  const rootHtml = await rootPage.text();
+  ok('根路径直达邮箱（/）', rootPage.status === 200 && rootHtml.includes('/js/app.js'));
   // 模板 CRUD
   const tplC = await api('POST', '/api/templates', { token: tokA, body: { name: '周报模板', subject: '每周播报', html: '<h1>周报</h1><p>内容</p>' } });
   ok('创建模板', tplC.status === 200 && tplC.json.id, JSON.stringify(tplC.json));

@@ -2,7 +2,7 @@
 import { Router } from 'express';
 import path from 'node:path';
 import fs from 'node:fs';
-import { q, now, audit } from '../db.js';
+import { q, now, audit, getSetting } from '../db.js';
 import { requireAuth, logAudit } from '../util/auth.js';
 import {
   listMessages, searchAllFolders, getMessageFull, moveMessages, trashMessages,
@@ -183,7 +183,10 @@ router.post('/attachments', requireAuth(), (req, res) => {
   const { draftId, filename, contentType, data } = req.body || {};
   if (!filename || !data) return res.status(400).json({ error: '参数缺失' });
   const buf = Buffer.from(String(data), 'base64');
-  if (buf.length > 25 * 1024 * 1024) return res.status(413).json({ error: '单个附件不能超过 25MB' });
+  // 上限由管理员在管理面板设置（默认 25MB）
+  const maxMB = Math.max(1, parseInt(getSetting('max_attachment_mb', '25')) || 25);
+  const maxBytes = maxMB * 1024 * 1024;
+  if (buf.length > maxBytes) return res.status(413).json({ error: `附件超过大小上限（${maxMB}MB）` });
   if (draftId) {
     const d = q.get('SELECT id FROM messages WHERE id = ? AND user_id = ?', draftId, req.user.id);
     if (!d) return res.status(404).json({ error: '草稿不存在' });

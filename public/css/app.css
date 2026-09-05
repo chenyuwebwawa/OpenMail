@@ -384,6 +384,9 @@ textarea.input { resize: vertical; min-height: 70px; }
 .compose-fab svg { width: 26px; height: 26px; }
 .compose-fab:active { transform: scale(.92); }
 .bl { display: none; }
+.ed-select { border: 1px solid var(--border); border-radius: 6px; background: var(--bg-panel); color: var(--text); font-size: 12.5px; padding: 4px 6px; max-width: 92px; }
+.sched-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-bottom: 4px; }
+.sched-opt { justify-content: flex-start; text-align: left; }
 .m-back { display: none !important; }
 .m-folders { display: none !important; }
 

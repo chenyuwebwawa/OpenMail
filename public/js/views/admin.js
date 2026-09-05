@@ -485,6 +485,7 @@ async function sysView(el) {
   el.innerHTML = `
     <div class="card"><div class="card-head"><h3>${t('sys.general')}</h3></div><div class="card-body">
       <div class="field"><label>${t('sys.site_name')}</label><input class="input" id="ss-name" value="${esc(r.siteName)}"></div>
+      <div class="field"><label>${t('sys.attach_limit')}</label><input class="input" id="ss-attach" type="number" min="1" max="2048" value="${r.maxAttachmentMB || 25}"></div>
       <div class="kv-row">
         <div><div class="k">${t('sys.openreg')}</div><div class="d">${t('sys.openreg_d')}</div></div>
         <label class="switch"><input type="checkbox" id="ss-reg" ${r.registration ? 'checked' : ''}><span class="slider"></span></label>
@@ -532,6 +533,7 @@ async function sysView(el) {
       siteName: el.querySelector('#ss-name').value,
       registration: el.querySelector('#ss-reg').checked,
       adminCode: el.querySelector('#ss-code').value,
+      maxAttachmentMB: parseInt(el.querySelector('#ss-attach').value) || 25,
     });
     toast(t('sys.saved'), 'ok');
   });

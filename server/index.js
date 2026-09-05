@@ -66,7 +66,7 @@ firstRunInit();
 // ---------- Express ----------
 const app = express();
 app.disable('x-powered-by');
-app.use(express.json({ limit: '40mb' }));
+app.use(express.json({ limit: '320mb' }));
 
 // 安全响应头（CSP 允许站内资源与 data: 图片）
 app.use((req, res, next) => {
