@@ -1,38 +1,87 @@
+# OpenMail — Docker Compose 部署
+#
+# 快速开始：
+#   1) cp .env.example .env        # 填写 OM_PRIMARY_DOMAIN / OM_BASE_URL / 中继 / TLS 等
+#   2) docker compose up -d --build   # 从源码构建并启动（推荐，任何环境都可用）
+#
+# 本文件所有配置都通过 ${VAR:-默认值} 读取同目录的 .env（Compose 会自动加载 .env，
+# 无需 env_file，兼容旧版 Compose）。若 .env 中不写某项，则使用下方默认值。
+#
+# 使用预构建镜像（不本地构建）：
+#   docker pull ghcr.io/chenyuwebwawa/openmail:latest
+#   echo "OPENMAIL_IMAGE=ghcr.io/chenyuwebwawa/openmail:latest" >> .env
+#   docker compose up -d
+#
+# 注意：下方 ports 端口映射的“容器侧”端口必须与 OM_*_PORT 环境变量一致。
+#       例如把 OM_HTTP_PORT 改成 8080，就必须同时把 "3000:3000" 改成 "8080:8080"。
+
 services:
   openmail:
+    # 本地构建上下文；设置 OPENMAIL_IMAGE 后可只用预构建镜像（docker compose pull）
     build: .
-    image: openmail:latest
+    image: ${OPENMAIL_IMAGE:-openmail:latest}
     container_name: openmail
     restart: unless-stopped
     ports:
-      - "3000:3000"    # Webmail / 管理后台 / API
-      - "25:25"        # SMTP MX 收信
-      - "587:587"      # SMTP Submission（SASL 认证发信）
-      - "465:465"      # SMTPS 隐式 TLS
-      - "143:143"      # IMAP
-      - "993:993"      # IMAPS
-      - "110:110"      # POP3
-      - "995:995"      # POP3S
+      - "3000:3000"    # Webmail / 管理后台 / API（对应 OM_HTTP_PORT，默认 3000）
+      - "25:25"        # SMTP MX 收信（对应 OM_SMTP_PORT）
+      - "587:587"      # SMTP Submission（SASL 认证发信，对应 OM_SUBMISSION_PORT）
+      - "465:465"      # SMTPS 隐式 TLS（对应 OM_SMTPS_PORT）
+      - "143:143"      # IMAP（对应 OM_IMAP_PORT）
+      - "993:993"      # IMAPS（对应 OM_IMAPS_PORT）
+      - "110:110"      # POP3（对应 OM_POP3_PORT）
+      - "995:995"      # POP3S（对应 OM_POP3S_PORT）
     environment:
-      OM_SITE_NAME: OpenMail
-      # 改成你的域名与对外地址
-      OM_PRIMARY_DOMAIN: example.com
-      OM_BASE_URL: https://mail.example.com
-      OM_ADMIN_EMAIL: admin@example.com
-      OM_SECRET: change-me-to-a-long-random-string
-      OM_REGISTRATION: "true"
-      # 生产建议配置出站中继（云厂商一般封 25 出站）：
-      # OM_RELAY_HOST: smtp.sendgrid.net
-      # OM_RELAY_PORT: "587"
-      # OM_RELAY_USER: apikey
-      # OM_RELAY_PASS: SG.xxxx
-      # TLS 证书（Let's Encrypt）：
-      # OM_TLS_CERT: /certs/fullchain.pem
-      # OM_TLS_KEY: /certs/privkey.pem
+      # ---- 基础 ----
+      OM_SITE_NAME: ${OM_SITE_NAME:-OpenMail}
+      OM_PRIMARY_DOMAIN: ${OM_PRIMARY_DOMAIN:-localhost}
+      OM_BASE_URL: ${OM_BASE_URL:-http://localhost:3000}
+      OM_ADMIN_EMAIL: ${OM_ADMIN_EMAIL:-admin@localhost}
+      # 为空时应用会自动生成一个随机密钥并持久化到 /app/data/secret.key（即宿主机 ./data/secret.key）。
+      # 该密钥用于加密已保存的 AI API Key：修改/更换它会导致旧 AI Key 无法解密，需要重新填写。
+      OM_SECRET: ${OM_SECRET:-}
+      OM_REGISTRATION: ${OM_REGISTRATION:-true}
+
+      # ---- HTTP ----
+      OM_HTTP_PORT: ${OM_HTTP_PORT:-3000}
+      # TLS 证书路径（容器内路径）：把证书挂载进容器后再填写，例如 /certs/fullchain.pem
+      # 生产环境也可以由 Nginx/Caddy 终结 Web TLS，此时留空即可。
+      OM_TLS_CERT: ${OM_TLS_CERT:-}
+      OM_TLS_KEY: ${OM_TLS_KEY:-}
+
+      # ---- 邮件端口（必须与上方 ports 映射一致）----
+      OM_SMTP_PORT: ${OM_SMTP_PORT:-25}
+      OM_SUBMISSION_PORT: ${OM_SUBMISSION_PORT:-587}
+      OM_SMTPS_PORT: ${OM_SMTPS_PORT:-465}
+      OM_IMAP_PORT: ${OM_IMAP_PORT:-143}
+      OM_IMAPS_PORT: ${OM_IMAPS_PORT:-993}
+      OM_POP3_PORT: ${OM_POP3_PORT:-110}
+      OM_POP3S_PORT: ${OM_POP3S_PORT:-995}
+      OM_SMTP_MAX_SIZE: ${OM_SMTP_MAX_SIZE:-26214400}
+      OM_MAX_MAILBOX_MB: ${OM_MAX_MAILBOX_MB:-1024}
+
+      # ---- 安全 ----
+      OM_SESSION_TTL_HOURS: ${OM_SESSION_TTL_HOURS:-168}
+      OM_BCRYPT_ROUNDS: ${OM_BCRYPT_ROUNDS:-10}
+
+      # ---- 站外投递中继（云厂商封 25 出站时必配）----
+      OM_RELAY_HOST: ${OM_RELAY_HOST:-}
+      OM_RELAY_PORT: ${OM_RELAY_PORT:-587}
+      OM_RELAY_SECURE: ${OM_RELAY_SECURE:-false}
+      OM_RELAY_USER: ${OM_RELAY_USER:-}
+      OM_RELAY_PASS: ${OM_RELAY_PASS:-}
+
+      # ---- 反垃圾 ----
+      OM_ANTISPAM: ${OM_ANTISPAM:-true}
+      OM_SPAM_SCORE: ${OM_SPAM_SCORE:-5}
+      OM_SPAM_REJECT: ${OM_SPAM_REJECT:-12}
+
+      # ---- DKIM ----
+      OM_DKIM_SELECTOR: ${OM_DKIM_SELECTOR:-om1}
     volumes:
-      - ./data:/app/data      # SQLite 数据库 + 自签证书
+      - ./data:/app/data      # SQLite 数据库、自签证书、secret.key、admin-credentials.txt
       - ./files:/app/files    # 附件
-      # - ./certs:/certs:ro   # 外部 TLS 证书
+      # - ./certs:/certs:ro   # 外部 TLS 证书（配合 OM_TLS_CERT=/certs/fullchain.pem）
     ulimits:
       nofile:
         soft: 65536

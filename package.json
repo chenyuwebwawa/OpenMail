@@ -9,7 +9,8 @@
     "dev": "node --watch server/index.js",
     "setup": "node server/setup.js",
     "langpacks": "node scripts/install-langpacks.mjs --status",
-    "test": "node tests/e2e.mjs"
+    "test": "node tests/e2e.mjs",
+    "test:secret": "node tests/config-secret.mjs"
   },
   "keywords": [
     "mail-server",

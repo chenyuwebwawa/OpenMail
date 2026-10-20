@@ -3,6 +3,7 @@
 import nodemailer from 'nodemailer';
 import { ImapFlow } from 'imapflow';
 import net from 'node:net';
+import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -95,6 +96,58 @@ function pop3({ user, pass }) {
     sock.write('LIST\r\n');
     setTimeout(() => { try { sock.destroy(); } catch {} reject(new Error('POP3 timeout')); }, 8000);
     sock.on('close', () => { if (lines.length) resolve(lines); });
+  });
+}
+
+// ---------------- 内进程 Mock OpenAI 兼容服务（AI 测试完全离线） ----------------
+const MOCK_AI_KEY = 'sk-mock-1234567890abcdef';
+function startMockAiServer() {
+  const state = { lastRequest: null, requests: [] };
+  const htmlTemplate = '<!DOCTYPE html><html><head><title>AI 模板</title></head><body><table><tr><td>mock</td></tr></table></body></html>';
+  function replyFor(body) {
+    const joined = JSON.stringify(body.messages || []).toLowerCase();
+    if (joined.includes('email analysis assistant')) {
+      return JSON.stringify({ summary: 'Mock 摘要', key_points: ['要点一', '要点二'], sentiment: 'neutral', action_items: ['回复确认'], suggested_reply_hint: '建议礼貌回复' });
+    }
+    if (joined.includes('template designer')) return htmlTemplate;
+    if (joined.includes('translator')) return '这是译文内容';
+    if (joined.includes('json') && joined.includes('subject')) return JSON.stringify({ subject: 'AI 主题', body_html: '<p>AI 正文</p>' });
+    return 'OK';
+  }
+  const server = http.createServer((req, res) => {
+    let raw = '';
+    req.on('data', d => { raw += d; });
+    req.on('end', () => {
+      const send = (status, obj) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(obj)); };
+      let body = null;
+      try { body = raw ? JSON.parse(raw) : null; } catch {}
+      state.lastRequest = { method: req.method, url: req.url, auth: req.headers.authorization || '', body };
+      state.requests.push(state.lastRequest);
+      if (req.method === 'POST' && req.url === '/v1/chat/completions') {
+        if (body?.model === 'retry-model' && body.max_tokens !== undefined) {
+          return send(400, { error: { message: "Unsupported parameter: 'max_tokens' is not supported with this model. Use 'max_completion_tokens' instead.", type: 'invalid_request_error' } });
+        }
+        if (body?.model === 'thinking-model') {
+          return send(200, { choices: [{ message: { role: 'assistant', content: '', reasoning_content: '先分析用户意图…' }, finish_reason: 'length' }] });
+        }
+        return send(200, { choices: [{ message: { role: 'assistant', content: replyFor(body || {}) }, finish_reason: 'stop' }], usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 } });
+      }
+      if (req.method === 'GET' && req.url === '/v1/models') {
+        return send(200, { object: 'list', data: [{ id: 'mock-gpt' }, { id: 'mock-reasoner' }] });
+      }
+      send(404, { error: { message: `mock AI: unknown route ${req.method} ${req.url}` } });
+    });
+  });
+  return new Promise((resolve) => {
+    server.listen(0, '127.0.0.1', () => {
+      const port = server.address().port;
+      resolve({
+        port,
+        base: `http://127.0.0.1:${port}`,
+        state,
+        close: () => new Promise(r => server.close(() => r())),
+      });
+    });
   });
 }
 
@@ -493,26 +546,104 @@ async function main() {
   ok('模板列表（含来源标记）', tplL.json.templates.length >= 2 && tplL.json.templates.every(x => ['manual', 'import', 'ai'].includes(x.source)));
   const tplOther = await api('GET', '/api/templates/' + tplC.json.id, { token: tokB });
   ok('模板按用户隔离', tplOther.status === 404);
+  // AI 助手测试（mock OpenAI，见文件顶部 startMockAiServer）
   // AI 配置（先重置为未配置状态）
+  const aiBadUrl = await api('PUT', '/api/ai/config', { token: tokA, body: { baseUrl: 'api.deepseek.com/v1', model: 'x', apiKey: 'k', enabled: true } });
+  ok('AI 配置拒绝缺少协议头的接口地址', aiBadUrl.status === 400, JSON.stringify(aiBadUrl.json));
   await api('PUT', '/api/ai/config', { token: tokA, body: { baseUrl: '', model: '', apiKey: null, enabled: false } });
   const aiNo = await api('POST', '/api/ai/write', { token: tokA, body: { instruction: 'test' } });
   ok('未配置 AI 时给出明确错误', aiNo.status === 400 && /配置/.test(aiNo.json.error || ''), JSON.stringify(aiNo.json));
-  const aiCfg = await api('PUT', '/api/ai/config', { token: tokA, body: { baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini', apiKey: 'sk-test-1234567890abcdef', enabled: true } });
-  ok('保存 AI 配置（密钥打码返回）', aiCfg.status === 200 && /sk-t\*+cdef/.test(aiCfg.json.config.apiKeyMasked) && !JSON.stringify(aiCfg.json).includes('sk-test-1234567890'), JSON.stringify(aiCfg.json.config));
+  // 保存配置：故意传入提供商文档里完整的 .../chat/completions 地址，验证自动规范化
+  const aiCfg = await api('PUT', '/api/ai/config', { token: tokA, body: { baseUrl: FULL_AI_ENDPOINT, model: 'mock-gpt', apiKey: MOCK_AI_KEY, enabled: true } });
+  const aiCfgConf = aiCfg.json.config || {};
+  ok('保存 AI 配置：完整 .../chat/completions 地址自动规范化',
+    aiCfg.status === 200 && aiCfgConf.baseUrl === MOCK_AI_BASE && !String(aiCfgConf.baseUrl).includes('/chat/completions') && aiCfgConf.endpoint === FULL_AI_ENDPOINT,
+    JSON.stringify(aiCfgConf));
+  ok('保存 AI 配置：密钥打码返回且不泄露明文',
+    /sk-m\*+cdef/.test(aiCfgConf.apiKeyMasked || '') && !JSON.stringify(aiCfg).includes(MOCK_AI_KEY),
+    JSON.stringify(aiCfgConf));
   const aiGet = await api('GET', '/api/ai/config', { token: tokA });
-  ok('读取 AI 配置不泄露明文密钥', aiGet.status === 200 && aiGet.json.config.hasKey === true && !JSON.stringify(aiGet.json).includes('sk-test-1234567890'));
-  const aiTest = await api('POST', '/api/ai/test', { token: tokA });
-  ok('假密钥调用上游返回可读错误', [400, 502].includes(aiTest.status) && !!aiTest.json.error, JSON.stringify(aiTest.json).slice(0, 120));
-  const aiCfg2 = await api('PUT', '/api/ai/config', { token: tokA, body: { baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini', apiKey: '', enabled: false } });
-  ok('留空 API Key 保留原密钥', aiCfg2.status === 200 && aiCfg2.json.config.hasKey === true);
+  const aiGetConf = aiGet.json.config || {};
+  ok('读取 AI 配置：hasKey/enabled/endpoint 正确且不泄露明文密钥',
+    aiGet.status === 200 && aiGetConf.hasKey === true && aiGetConf.enabled === true && aiGetConf.endpoint === FULL_AI_ENDPOINT && !JSON.stringify(aiGet).includes(MOCK_AI_KEY),
+    JSON.stringify(aiGetConf));
+  // 连通性测试：验证真实请求形状（Bearer / 单层 /v1/chat/completions / stream:false）
+  const reqBeforeTest = mockAi.state.requests.length;
+  const aiTestResp = await api('POST', '/api/ai/test', { token: tokA });
+  const testReq = mockAi.state.requests[reqBeforeTest];
+  ok('AI 连通性测试成功（reply/endpoint/model/latency）',
+    aiTestResp.status === 200 && aiTestResp.json.ok === true && aiTestResp.json.reply === 'OK' && aiTestResp.json.endpoint === FULL_AI_ENDPOINT && aiTestResp.json.model === 'mock-gpt' && typeof aiTestResp.json.latencyMs === 'number',
+    JSON.stringify(aiTestResp.json));
+  ok('OpenAI 请求格式正确（Bearer + 单层 /v1/chat/completions + stream:false）',
+    testReq?.method === 'POST' && testReq.url === '/v1/chat/completions' && testReq.auth === `Bearer ${MOCK_AI_KEY}` &&
+    testReq.body?.stream === false && testReq.body?.model === 'mock-gpt' && Array.isArray(testReq.body?.messages) && testReq.body?.max_tokens === 256,
+    JSON.stringify({ url: testReq?.url, auth: testReq?.auth, body: testReq?.body }));
+  // 对话（默认不带 max_tokens，避免推理模型报错）
+  const reqBeforeChat = mockAi.state.requests.length;
+  const aiChat = await api('POST', '/api/ai/chat', { token: tokA, body: { messages: [{ role: 'user', content: 'hello' }] } });
+  const chatReq = mockAi.state.requests[reqBeforeChat];
+  ok('AI 对话接口（默认不发送 max_tokens）', aiChat.status === 200 && aiChat.json.reply === 'OK' && chatReq?.body?.max_tokens === undefined, JSON.stringify({ reply: aiChat.json.reply, body: chatReq?.body }));
+  // 结构化任务
+  const aiWrite = await api('POST', '/api/ai/write', { token: tokA, body: { instruction: '写一封会议通知' } });
+  ok('AI 帮写邮件（返回 subject/body_html）', aiWrite.status === 200 && aiWrite.json.subject === 'AI 主题' && /AI 正文/.test(aiWrite.json.body_html || ''), JSON.stringify(aiWrite.json));
+  ok('结构化任务使用 JSON 模式（response_format）', mockAi.state.lastRequest?.body?.response_format?.type === 'json_object', JSON.stringify(mockAi.state.lastRequest?.body));
+  const aiTr = await api('POST', '/api/ai/translate', { token: tokA, body: { text: 'hello', targetLang: 'zh' } });
+  ok('AI 翻译邮件', aiTr.status === 200 && aiTr.json.translated === '这是译文内容', JSON.stringify(aiTr.json));
+  const aiAn = await api('POST', '/api/ai/analyze', { token: tokA, body: { subject: '测试主题', text: '这是一封测试邮件正文' } });
+  ok('AI 分析邮件（summary/key_points/sentiment）',
+    aiAn.status === 200 && !!aiAn.json.summary && Array.isArray(aiAn.json.key_points) && typeof aiAn.json.sentiment === 'string',
+    JSON.stringify(aiAn.json));
+  const aiTpl = await api('POST', '/api/ai/template', { token: tokA, body: { description: '产品周报模板' } });
+  ok('AI 生成邮件模板（返回 HTML）', aiTpl.status === 200 && /<html/i.test(aiTpl.json.html || '') && aiTpl.json.name === 'AI 模板', JSON.stringify(aiTpl.json).slice(0, 200));
+  // 模型列表代理
+  const aiModels = await api('GET', '/api/ai/models', { token: tokA });
+  ok('AI 模型列表（/models 代理）', aiModels.status === 200 && aiModels.json.models?.includes('mock-gpt') && aiModels.json.models?.includes('mock-reasoner'), JSON.stringify(aiModels.json));
+  // enabled 语义：关闭后生成类接口 403，/ai/test 仍可用；留空 key 保留
+  const aiDisable = await api('PUT', '/api/ai/config', { token: tokA, body: { baseUrl: MOCK_AI_BASE, model: 'mock-gpt', apiKey: '', enabled: false } });
+  ok('留空 API Key 保留原密钥、可单独关闭启用', aiDisable.status === 200 && aiDisable.json.config.hasKey === true && aiDisable.json.config.enabled === false, JSON.stringify(aiDisable.json.config));
+  const aiDisabledChat = await api('POST', '/api/ai/chat', { token: tokA, body: { messages: [{ role: 'user', content: 'hi' }] } });
+  ok('AI 未启用时生成接口返回 403 AI_DISABLED（含操作指引）',
+    aiDisabledChat.status === 403 && aiDisabledChat.json.code === 'AI_DISABLED' && /启用/.test(aiDisabledChat.json.error || ''),
+    JSON.stringify(aiDisabledChat.json));
+  const aiTestDisabled = await api('POST', '/api/ai/test', { token: tokA });
+  ok('未启用时仍可测试连接（便于排查）', aiTestDisabled.status === 200 && aiTestDisabled.json.ok === true, JSON.stringify(aiTestDisabled.json));
+  const aiEnable = await api('PUT', '/api/ai/config', { token: tokA, body: { baseUrl: MOCK_AI_BASE, model: 'mock-gpt', apiKey: '', enabled: true } });
+  ok('重新启用 AI 配置', aiEnable.status === 200 && aiEnable.json.config.enabled === true, JSON.stringify(aiEnable.json.config));
+  // apiKey:null 清除密钥
+  const aiClear = await api('PUT', '/api/ai/config', { token: tokA, body: { baseUrl: MOCK_AI_BASE, model: 'mock-gpt', apiKey: null, enabled: true } });
+  ok('apiKey:null 清除已保存密钥', aiClear.status === 200 && aiClear.json.config.hasKey === false, JSON.stringify(aiClear.json.config));
+  const aiClearedChat = await api('POST', '/api/ai/chat', { token: tokA, body: { messages: [{ role: 'user', content: 'hi' }] } });
+  ok('清除 Key 后调用提示缺少 API Key', aiClearedChat.status === 400 && /API Key/.test(aiClearedChat.json.error || ''), JSON.stringify(aiClearedChat.json));
+  // 自适应重试：上游拒绝 max_tokens → 自动改用 max_completion_tokens
+  await api('PUT', '/api/ai/config', { token: tokA, body: { baseUrl: MOCK_AI_BASE, model: 'retry-model', apiKey: MOCK_AI_KEY, enabled: true } });
+  const reqBeforeRetry = mockAi.state.requests.length;
+  const aiRetry = await api('POST', '/api/ai/test', { token: tokA });
+  const retryReqs = mockAi.state.requests.slice(reqBeforeRetry);
+  ok('不支持 max_tokens 时自适应改用 max_completion_tokens',
+    aiRetry.status === 200 && aiRetry.json.ok === true && retryReqs.length === 2 &&
+    retryReqs[0].body?.max_tokens === 256 && retryReqs[1].body?.max_completion_tokens === 256 && retryReqs[1].body?.max_tokens === undefined,
+    JSON.stringify({ retry: aiRetry.status, bodies: retryReqs.map(r => r.body) }));
+  // 推理模型只返回 reasoning_content 时不静默失败，给出可操作错误
+  await api('PUT', '/api/ai/config', { token: tokA, body: { baseUrl: MOCK_AI_BASE, model: 'thinking-model', apiKey: '', enabled: true } });
+  const aiThinking = await api('POST', '/api/ai/chat', { token: tokA, body: { messages: [{ role: 'user', content: 'hi' }] } });
+  ok('推理模型仅返回 reasoning_content 时给出明确错误',
+    aiThinking.status === 502 && /reasoning|推理/.test(aiThinking.json.error || ''),
+    JSON.stringify(aiThinking.json).slice(0, 200));
 
   console.log('\n' + '='.repeat(50));
   console.log(`结果: ${passed} 通过, ${failed} 失败`);
   if (failures.length) {
     console.log('失败项:');
     failures.forEach(f => console.log('  - ' + f));
-    process.exit(1);
+    process.exitCode = 1;
   }
 }
 
-main().catch(err => { console.error('测试框架异常:', err); process.exit(1); });
+// ---------------- 启动内进程 Mock AI 服务 + 运行主流程 ----------------
+const mockAi = await startMockAiServer();
+const MOCK_AI_BASE = `${mockAi.base}/v1`;
+const FULL_AI_ENDPOINT = `${MOCK_AI_BASE}/chat/completions`;
+
+main()
+  .catch(err => { console.error('测试框架异常:', err); process.exitCode = 1; })
+  .finally(() => { mockAi.close().catch(() => {}); });

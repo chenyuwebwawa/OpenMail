@@ -23,7 +23,7 @@ node --version   # v22.x 以上
 ```bash
 sudo useradd -m -s /bin/bash openmail
 sudo -iu openmail
-git clone https://github.com/yourname/openmail.git ~/openmail && cd ~/openmail
+git clone https://github.com/chenyuwebwawa/OpenMail.git ~/openmail && cd ~/openmail
 npm install --omit=dev
 ```
 
@@ -150,13 +150,20 @@ server {
 
 ## 7. Docker Compose 方式（替代 2–6 节）
 
+**注意：项目不保证 Docker Hub 上存在 `chenyuwebwawa/openmail` 镜像。** 预构建镜像由 GitHub Actions 自动发布到
+GHCR（`ghcr.io/chenyuwebwawa/openmail`，Docker Hub 为可选项），因此推荐直接用源码构建：
+
 ```bash
-git clone https://github.com/yourname/openmail.git && cd openmail
-cp .env.example .env   # 编辑配置
-docker compose up -d
+git clone https://github.com/chenyuwebwawa/OpenMail.git && cd OpenMail
+cp .env.example .env          # 编辑 OM_PRIMARY_DOMAIN / OM_BASE_URL / 中继 / TLS
+docker compose up -d --build  # 源码构建并启动
 ```
 
-端口映射、数据卷见 `docker-compose.yml`。证书可挂载到容器并配置 `OM_TLS_CERT/KEY`。
+- 所有 `OM_*` 配置都从 `.env` 读取（`docker-compose.yml` 使用 `${VAR:-默认值}` 插值），无需修改 compose 文件。
+- 端口映射、数据卷（`./data`、`./files`）见 `docker-compose.yml`；首次启动后管理员密码在 `data/admin-credentials.txt`。
+- TLS：把证书挂载进容器（如 `./certs:/certs:ro`），再在 `.env` 中写容器内路径
+  `OM_TLS_CERT=/certs/fullchain.pem`、`OM_TLS_KEY=/certs/privkey.pem`。
+- 使用预构建镜像、升级、备份、健康检查、GHCR/Docker Hub 发布与故障排查：**[DOCKER.md](DOCKER.md)**。
 
 ## 8. 上线后验证
 

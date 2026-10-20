@@ -25,12 +25,42 @@ if (fs.existsSync(envFile)) {
 const int = (v, d) => (v !== undefined && v !== '' ? parseInt(v, 10) : d);
 const bool = (v, d) => (v !== undefined && v !== '' ? v === 'true' || v === '1' : d);
 
+// 先计算数据目录，供「安全密钥」持久化使用（config 对象随后创建）
+const dataDir = path.resolve(ROOT, process.env.OM_DATA_DIR || 'data');
+const filesDir = path.resolve(ROOT, process.env.OM_FILES_DIR || 'files');
+
+// 安全密钥（用于加密用户 API Key 等敏感数据）：
+//   1) 显式设置 OM_SECRET 时以它为准（最高优先级）；
+//   2) 否则读取 <dataDir>/secret.key；不存在/为空时生成并持久化（0600），
+//      这样手动 npm start、Windows 脚本重启后仍能解密此前保存的数据。
+function loadOrCreateSecret() {
+  const fromEnv = (process.env.OM_SECRET || '').trim();
+  if (fromEnv) return fromEnv;
+  const secretFile = path.join(dataDir, 'secret.key');
+  try {
+    if (fs.existsSync(secretFile)) {
+      const saved = fs.readFileSync(secretFile, 'utf8').trim();
+      if (saved) return saved;
+    }
+    const generated = crypto.randomBytes(32).toString('hex');
+    fs.mkdirSync(dataDir, { recursive: true });
+    fs.writeFileSync(secretFile, generated + '\n', { mode: 0o600 });
+    try { fs.chmodSync(secretFile, 0o600); } catch { /* Windows 上 chmod 语义有限，忽略 */ }
+    // 注意：写 stderr 保持 stdout 干净（脚本/测试可直接读取导出值）
+    console.error(`[config] 未设置 OM_SECRET，已生成并持久化安全密钥: ${secretFile}（重启后将复用该密钥；请勿删除/泄露，建议同时加入备份）`);
+    return generated;
+  } catch (err) {
+    console.error(`[config] 无法读写安全密钥文件 ${secretFile}: ${err.message}；本次启动使用临时密钥，重启后已加密保存的数据将无法解密。请设置 OM_SECRET 环境变量。`);
+    return crypto.randomBytes(32).toString('hex');
+  }
+}
+
 export const config = {
   // ---- 基础 ----
   siteName: process.env.OM_SITE_NAME || 'OpenMail',
   baseUrl: process.env.OM_BASE_URL || 'http://localhost:3000',
-  dataDir: path.resolve(ROOT, process.env.OM_DATA_DIR || 'data'),
-  filesDir: path.resolve(ROOT, process.env.OM_FILES_DIR || 'files'),
+  dataDir,
+  filesDir,
   primaryDomain: process.env.OM_PRIMARY_DOMAIN || 'localhost',
 
   // ---- HTTP ----
@@ -54,7 +84,7 @@ export const config = {
   jmapEnabled: bool(process.env.OM_JMAP, false),
 
   // ---- 安全 ----
-  secret: process.env.OM_SECRET || crypto.randomBytes(32).toString('hex'),
+  secret: loadOrCreateSecret(),
   sessionTtlHours: int(process.env.OM_SESSION_TTL_HOURS, 24 * 7),
   registrationEnabled: bool(process.env.OM_REGISTRATION, true),
   bcryptRounds: int(process.env.OM_BCRYPT_ROUNDS, 10),

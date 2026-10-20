@@ -86,7 +86,7 @@
 | 方式 | 命令 / 入口 | 适合 |
 | --- | --- | --- |
 | **一键脚本** | `curl -fsSL https://raw.githubusercontent.com/chenyuwebwawa/OpenMail/main/install.sh \| bash` | 全新 Linux VPS（自动装 Node 22 + 源码 + systemd + 语言包） |
-| **Docker** | `docker compose up -d`（或下方单命令） | 有 Docker / 1Panel 的服务器 |
+| **Docker** | `docker compose up -d --build`（源码构建）· `ghcr.io/chenyuwebwawa/openmail:latest`（预构建） | 有 Docker / 1Panel 的服务器 |
 | **普通服务器手动安装** | `git clone && npm install && npm start` | 开发环境、Windows（`start-windows.bat` 双击启动） |
 | **运维面板** | 宝塔面板指南 · 1Panel 指南 | 已用面板管理的服务器 |
 
@@ -114,22 +114,49 @@ cd /opt/openmail && bash scripts/update.sh      # 加 --check 只查看新版本
 
 ### 2. Docker 安装
 
+OpenMail 是**单容器**应用 —— SQLite 与附件放在 bind mount 中，无需其它 sidecar 容器。镜像有两种获取方式：
+
+**方式 A —— 源码构建（推荐，任何环境都可用）：**
+
 ```bash
 git clone https://github.com/chenyuwebwawa/OpenMail.git && cd OpenMail
-cp .env.example .env      # 设置域名 / 中继 / TLS
-docker compose up -d
+cp .env.example .env                # 设置域名 / 对外地址 / 中继 / TLS
+docker compose up -d --build
 ```
 
-或单命令启动（标准端口全映射 + 数据持久化）：
+`docker-compose.yml` 会通过 `${VAR:-默认值}` 读取 `.env` 中的全部 `OM_*` 配置（不再硬编码）；数据库、自动生成的 `secret.key` 与 `admin-credentials.txt` 持久化在 `./data`，附件在 `./files`。管理员初始密码会在首次启动时打印，同时写入 `data/admin-credentials.txt`。
+
+**方式 B —— 预构建镜像（由 GitHub Actions 自动发布到 GHCR）：**
+
+[`Docker Image` workflow](.github/workflows/docker-publish.yml) 会在 push 到 `main`、打 `v*` 标签以及手动触发时，构建 `linux/amd64` / `linux/arm64` 双架构镜像并推送到 `ghcr.io/chenyuwebwawa/openmail`：
 
 ```bash
+# 如果 package 是 private，需要先登录（PAT 勾选 read:packages）：
+# docker login ghcr.io -u <github 用户名>
+docker pull ghcr.io/chenyuwebwawa/openmail:latest
+
 docker run -d --name openmail --restart unless-stopped \
   -p 3000:3000 -p 25:25 -p 587:587 -p 465:465 \
   -p 143:143 -p 993:993 -p 110:110 -p 995:995 \
   -v openmail-data:/app/data -v openmail-files:/app/files \
   -e OM_PRIMARY_DOMAIN=example.com -e OM_BASE_URL=https://mail.example.com \
-  chenyuwebwawa/openmail:latest
+  ghcr.io/chenyuwebwawa/openmail:latest
 ```
+
+> `OM_SECRET` 可以留空：首次启动会自动生成密钥并持久化到数据卷内的 `/app/data/secret.key`（重建容器不会失效，已保存的 AI Key 可继续解密）。若显式设置，请保持固定值 —— 修改会导致所有已保存的 AI API Key 失效。
+
+也可以用 Compose 直接使用预构建镜像（不本地构建）：
+
+```bash
+echo "OPENMAIL_IMAGE=ghcr.io/chenyuwebwawa/openmail:latest" >> .env
+docker compose up -d
+```
+
+> **镜像拉不到？** 旧版文档中的 Docker Hub 镜像 `chenyuwebwawa/openmail` **不保证存在** —— 项目并不保证在 Docker Hub 发布镜像，预构建镜像由 GitHub Actions 发布到 GHCR。刚 fork 的仓库如果尚未发布 GHCR 包（或拉取时报 `manifest unknown` / `repository does not exist`），请改用方式 A，或在仓库 **Actions → Docker Image → Run workflow** 手动发布一次。Docker Hub 发布是**可选项**：维护者在仓库 Secrets 中配置 `DOCKERHUB_USERNAME` 与 `DOCKERHUB_TOKEN`（Docker Hub Access Token，权限 Read & Write）后，工作流才会额外推送 `docker.io/chenyuwebwawa/openmail`。
+>
+> **健康检查：** 镜像每 30 秒探测公开路由 `GET /`（返回 HTTP 200），应用启动后 `docker compose ps` 会显示 `healthy`。**升级：** 预构建镜像用 `docker compose pull && docker compose up -d`；源码构建用 `git pull && docker compose up -d --build`（源码安装请用 `scripts/update.sh`）。
+>
+> 完整 Docker 指南（GHCR / Docker Hub 发布、端口与防火墙、反代 TLS、备份、多架构与故障排查）：**[docs/DOCKER.md](docs/DOCKER.md)**。
 
 ### 3. 普通服务器 / 手动安装
 
@@ -182,6 +209,17 @@ npm run langpacks                               # 查看状态
 
 或在管理后台网页一键安装（设置 → 语言 → 安装），或手动把 `langpacks/<代码>.json` 复制到 `public/locales/`。缺失词条自动回退英文；自制语言包方法见 [langpacks/README.md](langpacks/README.md)。
 
+## AI 助手（OpenAI 兼容）
+
+AI 功能（帮写邮件、翻译、分析、生成 HTML 模板）由**服务端代理调用**，支持**任意 OpenAI 兼容的 `POST {base}/chat/completions` 接口**。在 **设置 → AI 助手** 中按用户配置：选择服务商预设（OpenAI / DeepSeek / Moonshot / 智谱 GLM / Ollama / 自定义），填写接口地址、模型与 API Key，点 **测试连接** 即可。Key 使用 AES-256-GCM 加密存入 SQLite，接口永不返回明文。
+
+- **接口地址写法** —— 可填服务根地址 / `…/v1`（如 `https://api.deepseek.com`、`https://api.openai.com/v1`），也可以直接粘贴服务商文档里的完整地址（如 `https://api.deepseek.com/chat/completions`）。保存时自动规范化，服务端按 OpenAI 的 chat-completions 格式调用 `{base}/chat/completions`，请求头为 `Authorization: Bearer <key>`（`stream: false`）。
+- **DeepSeek 示例** —— 选择 `DeepSeek` 预设（接口地址 `https://api.deepseek.com`、模型 `deepseek-chat`，需要推理可用 `deepseek-reasoner`），粘贴 API Key 保存即可，无需手工拼路径。
+- **模型列表** —— 点「获取模型」会代理上游 `GET {base}/models` 并填充下拉候选；仍可手动输入模型名。
+- **启用 / 停用** —— 首次配置默认勾选启用；停用后生成类接口返回 `403 AI_DISABLED` 并提示如何开启，而「测试连接」仍可用于排查配置。
+- **兼容推理模型** —— 上游拒绝 `max_tokens` 时自动改用 `max_completion_tokens` 重试；不支持 `temperature` / `response_format` 时自动去掉重试；兼容 SSE 流式响应、content 数组与 `reasoning_content`。报错会带上实际请求端点、HTTP 状态码与上游原始信息。
+- **密钥安全** —— 已保存的 API Key 用 `OM_SECRET` 加密；未设置时会生成一次并持久化到 `data/secret.key`（随 `data/` 一起备份，且以后不要修改，否则已存 Key 会失效）。旧版本使用「每次启动随机密钥」时保存的 Key 已无法解密，升级后需重新填写一次。
+
 ## 配置
 
 全部通过环境变量（或 `.env` 文件）配置 —— 完整列表见 [.env.example](.env.example)。常用项：
@@ -190,7 +228,7 @@ npm run langpacks                               # 查看状态
 | --- | --- | --- |
 | `OM_PRIMARY_DOMAIN` | `localhost` | 首次启动自动创建的主域名（含 DKIM 密钥） |
 | `OM_BASE_URL` | `http://localhost:3000` | 对外地址，用于密码重置链接 |
-| `OM_SECRET` | 随机 | 会话签名密钥，**生产务必固定** |
+| `OM_SECRET` | 自动生成 | 服务端密钥，用于加密已保存的 AI API Key。未设置时自动生成并保存到 `data/secret.key`；**修改会导致已保存的 AI Key 失效**（需重新填写），生产环境建议固定一个长随机值 |
 | `OM_REGISTRATION` | `true` | 是否开放自助注册 |
 | `OM_RELAY_HOST/PORT/USER/PASS` | – | 站外投递上游 SMTP 中继 |
 | `OM_TLS_CERT` / `OM_TLS_KEY` | – | STARTTLS / 隐式 TLS 的 PEM 证书 |
@@ -228,6 +266,7 @@ node server/setup.js list-users
 
 ```
 openmail/
+├── .github/workflows/      # CI：自动构建并发布多架构镜像到 GHCR（可选 Docker Hub）
 ├── install.sh              # 一键安装脚本（Node 22 + systemd + 语言包）
 ├── start-windows.bat       # Windows 双击启动器
 ├── scripts/                # update.sh（一键更新）· doctor.sh（自检诊断）· install-langpacks.mjs · baota-adapt.sh（宝塔适配）
@@ -250,8 +289,8 @@ openmail/
 │   ├── install-langpacks.mjs
 │   ├── update.sh` — 一键更新
 │   └── baota-adapt.sh      # 宝塔面板适配脚本（含宝塔邮局处置）
-├── tests/e2e.mjs           # 98 项端到端测试（API、SMTP、IMAP、POP3、i18n、AI…）
-├── docs/                   # DNS 指南、部署指南、面板指南、截图
+├── tests/e2e.mjs           # 119 项离线端到端测试（API、SMTP、IMAP、POP3、i18n、mock-AI）
+├── docs/                   # DNS 指南、部署指南、Docker 指南（docs/DOCKER.md）、面板指南、截图
 ├── Dockerfile · docker-compose.yml · .env.example
 ```
 
@@ -284,8 +323,9 @@ openmail/
 ## 开发与测试
 
 ```bash
-npm test        # 对运行中的服务执行 77 项端到端测试（3000/2525/2587/1143/1110 端口）
-npm run dev     # node --watch 自动重启
+npm test            # 对运行中的服务执行 119 项离线端到端测试（内置 mock AI，无需外网）
+npm run test:secret # 验证自动生成的 OM_SECRET 在重启后保持不变
+npm run dev         # node --watch 自动重启
 ```
 
 测试覆盖注册登录、站内与定时发送、附件、原始 SMTP 外部投递、SASL Submission、IMAP（fetch/store/search/append/list）、POP3、文件夹、过滤规则、黑名单、联系人导入导出、2FA，以及包含 DKIM/DNS 记录在内的全部管理端 API。

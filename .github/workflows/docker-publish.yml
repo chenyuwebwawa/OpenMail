@@ -1,0 +1,175 @@
+# OpenMail 镜像构建与发布
+#
+# 触发条件：
+#   - push 到 main          → 构建 + 发布 ghcr.io/<owner>/openmail:latest（同一提交还能得到 sha-xxxx 标签）
+#   - push v* 标签          → 构建 + 发布 semver 标签（v1.2.3 → 1.2.3、1.2、v1.2.3 + sha-xxxx）
+#                             （latest 只在 main 上生成，标签构建不会覆盖 latest）
+#   - pull_request          → 仅做构建校验（不推送），Dockerfile 坏了 PR 就会红
+#   - workflow_dispatch     → 手动发布（在仓库 Actions 页面点 “Run workflow”，新 fork 首次发布用这个）
+#
+# 使用内置 GITHUB_TOKEN 推送到 GHCR，不需要任何仓库 Secret：
+#   首次发布后，如需让匿名用户拉取，请到仓库 → Packages → 对应 package → Package settings
+#   把可见性改为 Public（默认可能是 private，拉取需要 docker login ghcr.io）。
+#
+# Docker Hub 为可选项：在仓库 Settings → Secrets and variables → Actions 中添加
+#   DOCKERHUB_USERNAME = Docker Hub 用户名
+#   DOCKERHUB_TOKEN    = Docker Hub Access Token（权限 Read & Write）
+# 两个 Secret 同时存在时，才会额外推送 docker.io/chenyuwebwawa/openmail。
+# 注意：不要把 secrets.* 直接写在 `if:` 表达式里（GitHub 不允许），下面用 step 输出探测。
+
+name: Docker Image
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+# 最小权限：读代码 + 写 packages（推 GHCR 必需）
+permissions:
+  contents: read
+  packages: write
+
+# 同一 ref 的构建串行化，新提交取消旧构建
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # build：所有事件（含 PR）都执行的构建校验，只构建 amd64、不推送
+  # ---------------------------------------------------------------------------
+  build:
+    name: Build (validation)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: false
+          load: false
+          tags: local/openmail:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ---------------------------------------------------------------------------
+  # publish：仅在 main / v* 标签 / 手动触发时执行；PR 不发布
+  # ---------------------------------------------------------------------------
+  publish:
+    name: Publish
+    needs: build
+    if: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # GHCR 镜像名必须全小写（GitHub 用户名/组织名可能含大写），不能用 github.repository_owner 原样拼接
+      - name: Compute GHCR image name (lowercase)
+        shell: bash
+        run: echo "GHCR_IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/openmail" >> "$GITHUB_ENV"
+
+      # arm64 构建需要 QEMU 模拟
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 生成标签与 OCI 标签：
+      #   main 分支 → latest + sha-<短提交>
+      #   v1.2.3 标签 → 1.2.3、1.2、v1.2.3、sha-<短提交>
+      - name: Extract metadata for GHCR
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.GHCR_IMAGE }}
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=sha,format=short
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=ref,event=branch
+            type=ref,event=tag
+
+      - name: Build and push to GHCR (linux/amd64, linux/arm64)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # -----------------------------------------------------------------------
+      # 可选的 Docker Hub 发布：探测两个 Secret 是否都存在，存在才执行后续步骤
+      # -----------------------------------------------------------------------
+      - name: Detect Docker Hub credentials (optional)
+        id: hub
+        shell: bash
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            echo "Docker Hub 凭据已配置：将额外推送 docker.io/chenyuwebwawa/openmail"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "未配置 Docker Hub 凭据：跳过 Docker Hub 推送（仅发布 GHCR）"
+          fi
+
+      - name: Log in to Docker Hub (optional)
+        if: steps.hub.outputs.enabled == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata for Docker Hub (optional)
+        if: steps.hub.outputs.enabled == 'true'
+        id: hubmeta
+        uses: docker/metadata-action@v5
+        with:
+          images: docker.io/chenyuwebwawa/openmail
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=sha,format=short
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=ref,event=branch
+            type=ref,event=tag
+
+      - name: Build and push to Docker Hub (optional)
+        if: steps.hub.outputs.enabled == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.hubmeta.outputs.tags }}
+          labels: ${{ steps.hubmeta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

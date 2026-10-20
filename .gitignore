@@ -3,3 +3,5 @@ node_modules/.cache
 .DS_Store
 Thumbs.db
 nul
+# 服务端自动生成/持久化的加密密钥（禁止提交，应随 data/ 一起备份）
+data/secret.key

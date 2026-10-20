@@ -41,61 +41,143 @@ async function renderSection() {
 }
 
 // ---------- AI 助手 ----------
+// 常见 OpenAI 兼容服务预设：选择后自动填入接口地址与模型（API Key 不动，custom 可自由填写）
+const AI_PRESETS = [
+  { id: 'custom', baseUrl: '', model: '' },
+  { id: 'openai', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
+  { id: 'deepseek', baseUrl: 'https://api.deepseek.com', model: 'deepseek-chat' },
+  { id: 'moonshot', baseUrl: 'https://api.moonshot.cn/v1', model: 'moonshot-v1-8k' },
+  { id: 'glm', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4-flash' },
+  { id: 'ollama', baseUrl: 'http://localhost:11434/v1', model: 'llama3.2' },
+];
+function detectAiPreset(baseUrl) {
+  const u = String(baseUrl || '').trim().replace(/\/+$/, '').toLowerCase();
+  if (!u) return 'custom';
+  const hit = AI_PRESETS.find(p => p.id !== 'custom' && u === p.baseUrl.replace(/\/+$/, '').toLowerCase());
+  return hit ? hit.id : 'custom';
+}
+
 async function aiView(el) {
   const r = await API.get('/ai/config');
-  const c = r.config;
+  const c = r.config || {};
+  // 首次配置（没有任何已存配置）时默认勾选「启用 AI 功能」，保存后即可直接使用
+  const firstSetup = !c.baseUrl && !c.model && !c.hasKey;
+  const preset = detectAiPreset(c.baseUrl);
+  const badge = c.hasKey && c.enabled
+    ? `<span class="badge badge-green">${t('ai.status_enabled')}</span>`
+    : c.hasKey
+      ? `<span class="badge badge-amber">${t('ai.status_configured_disabled')}</span>`
+      : `<span class="badge">${t('ai.status_not_configured')}</span>`;
   el.innerHTML = `
-    <div class="card"><div class="card-head"><h3>${icon('key')} ${t('ai.title')}</h3>
-      <span class="badge ${c.hasKey && c.enabled ? 'badge-green' : ''}">${c.hasKey && c.enabled ? t('ai.configured') : t('ai.not_configured')}</span>
+    <div class="card"><div class="card-head"><h3>${icon('key')} ${t('ai.title')}</h3>${badge}
     </div><div class="card-body">
       <p style="font-size:12.5px;color:var(--text-2);margin-bottom:16px">${t('ai.sub')}</p>
-      <div class="field"><label>${t('ai.baseUrl')}</label><input class="input" id="ai-url" placeholder="${t('ai.baseUrlPh')}" value="${esc(c.baseUrl || '')}"></div>
+      <div class="field"><label>${t('ai.provider')}</label>
+        <select class="input" id="ai-provider">${AI_PRESETS.map(p => `<option value="${p.id}" ${preset === p.id ? 'selected' : ''}>${t('ai.preset_' + p.id)}</option>`).join('')}</select>
+      </div>
+      <div class="field"><label>${t('ai.baseUrl')}</label>
+        <input class="input" id="ai-url" placeholder="${t('ai.baseUrlPh')}" value="${esc(c.baseUrl || '')}">
+        <div style="font-size:12px;color:var(--text-3);margin-top:6px">${t('ai.baseUrlHint')}</div>
+      </div>
       <div class="form-row">
-        <div class="field"><label>${t('ai.model')}</label><input class="input" id="ai-model" placeholder="${t('ai.modelPh')}" value="${esc(c.model || '')}"></div>
-        <div class="field"><label>${t('ai.apiKey')}（${c.hasKey ? esc(c.apiKeyMasked) : t('ai.apiKeyKeep')}）</label><input class="input" id="ai-key" type="password" placeholder="${c.hasKey ? t('ai.apiKeyKeep') : 'sk-...'}"></div>
+        <div class="field"><label>${t('ai.model')}</label>
+          <div style="display:flex;gap:8px">
+            <input class="input" id="ai-model" list="ai-models" placeholder="${t('ai.modelPh')}" value="${esc(c.model || '')}" style="flex:1">
+            <button class="btn btn-sm" id="ai-models-btn" type="button" title="${t('ai.models_fetch')}">${icon('refresh')} ${t('ai.models_fetch')}</button>
+          </div>
+          <datalist id="ai-models"></datalist>
+          <div id="ai-models-out" style="font-size:12px;color:var(--text-3);margin-top:6px;word-break:break-all"></div>
+        </div>
+        <div class="field"><label>${t('ai.apiKey')}${c.hasKey ? `（${esc(c.apiKeyMasked)}）` : ''}</label>
+          <input class="input" id="ai-key" type="password" placeholder="${c.hasKey ? t('ai.apiKeyKeep') : 'sk-...'}">
+          ${c.hasKey ? `<button class="btn btn-sm" id="ai-clear-key" type="button" style="margin-top:8px">${t('ai.clear_key')}</button>` : ''}
+        </div>
       </div>
       <div class="kv-row">
-        <div><div class="k">${t('ai.enabled')}</div><div class="d">${t('ai.sub')}</div></div>
-        <label class="switch"><input type="checkbox" id="ai-enabled" ${c.enabled ? 'checked' : ''}><span class="slider"></span></label>
+        <div><div class="k">${t('ai.enabled')}</div><div class="d">${t('ai.enabled_hint')}</div></div>
+        <label class="switch"><input type="checkbox" id="ai-enabled" ${c.enabled || firstSetup ? 'checked' : ''}><span class="slider"></span></label>
       </div>
-      <div style="display:flex;gap:10px;margin-top:16px">
+      <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;align-items:center">
         <button class="btn btn-primary" id="ai-save">${t('ai.save')}</button>
         <button class="btn" id="ai-test">${t('ai.test')}</button>
-        <span id="ai-test-out" style="font-size:12.5px;color:var(--text-3);align-self:center"></span>
+        <span id="ai-test-out" style="font-size:12.5px;color:var(--text-3);word-break:break-all"></span>
       </div>
       <div style="margin-top:18px;padding:14px 16px;background:var(--bg-hover);border-radius:9px;font-size:12px;color:var(--text-2);line-height:1.9">
         <b>${t('ai.title')} · ${t('ai.write')}</b> · ${t('ai.translate')} · ${t('ai.analyze')} · ${t('tpl.ai_gen')}<br>
-        ${t('ai.baseUrlPh')} · ${t('ai.modelPh')} · OpenAI / DeepSeek / Moonshot / GLM / Ollama（${esc('OpenAI-compatible')}）
+        ${t('ai.baseUrlHint')} · OpenAI / DeepSeek / Moonshot / GLM / Ollama（${esc('OpenAI-compatible')}）
       </div>
     </div></div>`;
 
+  const currentPayload = (keyValue) => ({
+    baseUrl: el.querySelector('#ai-url').value,
+    model: el.querySelector('#ai-model').value,
+    apiKey: keyValue === undefined ? el.querySelector('#ai-key').value : keyValue,
+    enabled: el.querySelector('#ai-enabled').checked,
+  });
+  const saveConfig = () => API.put('/ai/config', currentPayload());
+
+  // 选择预设：自动填入接口地址 + 模型（不碰 API Key）；custom 保持手动输入
+  el.querySelector('#ai-provider').addEventListener('change', (e) => {
+    const p = AI_PRESETS.find(x => x.id === e.target.value);
+    if (!p || p.id === 'custom') return;
+    el.querySelector('#ai-url').value = p.baseUrl;
+    el.querySelector('#ai-model').value = p.model;
+  });
+
   const save = async () => {
     try {
-      await API.put('/ai/config', {
-        baseUrl: el.querySelector('#ai-url').value,
-        model: el.querySelector('#ai-model').value,
-        apiKey: el.querySelector('#ai-key').value,
-        enabled: el.querySelector('#ai-enabled').checked,
-      });
+      await saveConfig();
       toast(t('ai.saved'), 'ok');
       renderSection();
     } catch (e) { toast(e.message, 'err'); }
   };
   el.querySelector('#ai-save').addEventListener('click', save);
   el.querySelector('#ai-key').addEventListener('keydown', e => { if (e.key === 'Enter') save(); });
+
+  // 获取模型列表（保存当前配置后请求上游 /models，失败不阻止手动输入）
+  el.querySelector('#ai-models-btn').addEventListener('click', async () => {
+    const out = el.querySelector('#ai-models-out');
+    const btn = el.querySelector('#ai-models-btn');
+    out.textContent = t('ai.models_loading');
+    out.style.color = 'var(--text-3)';
+    btn.disabled = true;
+    try {
+      await saveConfig();
+      const res = await API.get('/ai/models');
+      const list = Array.isArray(res.models) ? res.models : [];
+      el.querySelector('#ai-models').innerHTML = list.map(id => `<option value="${esc(id)}"></option>`).join('');
+      out.textContent = t('ai.models_ok', { count: list.length });
+      out.style.color = 'var(--success)';
+    } catch (e) {
+      out.textContent = '✗ ' + t('ai.models_fail') + '：' + e.message;
+      out.style.color = 'var(--danger)';
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // 清除已保存的 Key（apiKey: null）
+  const clearBtn = el.querySelector('#ai-clear-key');
+  if (clearBtn) {
+    clearBtn.addEventListener('click', async () => {
+      if (!confirm(t('ai.clear_confirm'))) return;
+      try {
+        await API.put('/ai/config', currentPayload(null));
+        toast(t('ai.cleared'), 'ok');
+        renderSection();
+      } catch (e) { toast(e.message, 'err'); }
+    });
+  }
+
   el.querySelector('#ai-test').addEventListener('click', async () => {
     const out = el.querySelector('#ai-test-out');
     out.textContent = t('ai.testing');
+    out.style.color = 'var(--text-3)';
     try {
-      // 先保存再测试，保证测的是当前填写内容
-      await API.put('/ai/config', {
-        baseUrl: el.querySelector('#ai-url').value,
-        model: el.querySelector('#ai-model').value,
-        apiKey: el.querySelector('#ai-key').value,
-        enabled: el.querySelector('#ai-enabled').checked,
-      });
-      const r = await API.post('/ai/test');
-      out.textContent = `✓ ${t('ai.test_ok')} (${esc(r.reply)})`;
+      // 先保存再测试，保证测的是当前填写内容（未启用时也可测试，便于排查）
+      await saveConfig();
+      const res = await API.post('/ai/test');
+      out.textContent = `✓ ${t('ai.test_ok')} · ${res.model || ''} · ${t('ai.test_latency', { ms: res.latencyMs ?? 0 })} · ${t('ai.test_endpoint')}: ${res.endpoint || ''}`;
       out.style.color = 'var(--success)';
     } catch (e) {
       out.textContent = '✗ ' + e.message;
