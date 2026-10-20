@@ -12,9 +12,9 @@
 #   把可见性改为 Public（默认可能是 private，拉取需要 docker login ghcr.io）。
 #
 # Docker Hub 为可选项：在仓库 Settings → Secrets and variables → Actions 中添加
-#   DOCKERHUB_USERNAME = Docker Hub 用户名
+#   DOCKERHUB_USERNAME = Docker Hub 用户名（同时作为镜像命名空间）
 #   DOCKERHUB_TOKEN    = Docker Hub Access Token（权限 Read & Write）
-# 两个 Secret 同时存在时，才会额外推送 docker.io/chenyuwebwawa/openmail。
+# 两个 Secret 同时存在时，才会额外推送 docker.io/<DOCKERHUB_USERNAME>/openmail。
 # 注意：不要把 secrets.* 直接写在 `if:` 表达式里（GitHub 不允许），下面用 step 输出探测。
 
 name: Docker Image
@@ -133,7 +133,7 @@ jobs:
         run: |
           if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
             echo "enabled=true" >> "$GITHUB_OUTPUT"
-            echo "Docker Hub 凭据已配置：将额外推送 docker.io/chenyuwebwawa/openmail"
+            echo "Docker Hub 凭据已配置：将额外推送 docker.io/${DOCKERHUB_USERNAME}/openmail"
           else
             echo "enabled=false" >> "$GITHUB_OUTPUT"
             echo "未配置 Docker Hub 凭据：跳过 Docker Hub 推送（仅发布 GHCR）"
@@ -152,7 +152,7 @@ jobs:
         id: hubmeta
         uses: docker/metadata-action@v5
         with:
-          images: docker.io/chenyuwebwawa/openmail
+          images: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/openmail
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=sha,format=short
@@ -173,3 +173,35 @@ jobs:
           labels: ${{ steps.hubmeta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # 可选：确保 Docker Hub 仓库可被匿名拉取（Public），并实测 manifest 可访问。
+      # 该步骤失败不会让构建变红（continue-on-error），只会给出警告与操作提示。
+      - name: Verify Docker Hub image is publicly pullable (optional)
+        if: steps.hub.outputs.enabled == 'true'
+        continue-on-error: true
+        shell: bash
+        env:
+          DH_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          DH_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          set -u
+          JWT=$(curl -fsS -X POST -H 'Content-Type: application/json' \
+            -d "{\"username\":\"${DH_USER}\",\"password\":\"${DH_TOKEN}\"}" \
+            https://hub.docker.com/v2/users/login/ 2>/dev/null | jq -r '.token // empty')
+          if [ -n "${JWT}" ]; then
+            curl -fsS -X PATCH -H "Authorization: JWT ${JWT}" -H 'Content-Type: application/json' \
+              -d '{"is_private":false}' "https://hub.docker.com/v2/repositories/${DH_USER}/openmail/" >/dev/null \
+              && echo "已确保 Docker Hub 仓库 ${DH_USER}/openmail 为 Public" \
+              || echo "::warning::无法自动把仓库设为 Public，请到 Docker Hub 仓库 Settings 手动修改可见性"
+          else
+            echo "::warning::无法通过 Docker Hub API 登录（PAT 权限不足？），若仓库为 Private 请手动设为 Public"
+          fi
+          TOKEN=$(curl -fsS "https://auth.docker.io/token?service=registry.docker.io&scope=repository:${DH_USER}/openmail:pull" \
+            | jq -r '.token // empty')
+          if curl -fsS -o /dev/null -H "Authorization: Bearer ${TOKEN}" \
+            -H "Accept: application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json" \
+            "https://registry-1.docker.io/v2/${DH_USER}/openmail/manifests/latest"; then
+            echo "✅ 匿名拉取验证通过：docker pull ${DH_USER}/openmail:latest"
+          else
+            echo "::warning::镜像已推送，但匿名拉取失败，请把 Docker Hub 仓库 ${DH_USER}/openmail 的可见性改为 Public"
+          fi
