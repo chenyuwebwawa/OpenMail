@@ -88,7 +88,7 @@ OpenMail ships **four install paths** — pick one:
 | Method | Command / Entry | Best for |
 | --- | --- | --- |
 | **One-click script** | `curl -fsSL https://raw.githubusercontent.com/chenyuwebwawa/OpenMail/main/install.sh \| bash` | Fresh Linux VPS (installs Node 22, source, `.env`, systemd, language packs) |
-| **Docker** | `docker compose up -d --build` (source) · `ghcr.io/chenyuwebwawa/openmail:latest` (prebuilt) | Any server with Docker / 1Panel |
+| **Docker** | `docker compose up -d --build` (source) · `ghcr.io/chenyuwebwawa/openmail:latest` / `chenyutech/openmail:latest` (prebuilt) | Any server with Docker / 1Panel |
 | **Manual server** | `git clone && npm install && npm start` | Development, Windows (see `start-windows.bat`), custom setups |
 | **Hosting panels** | BT Panel (宝塔) guide · 1Panel guide | Existing panel-managed servers |
 
@@ -129,21 +129,27 @@ docker compose up -d --build
 
 `docker-compose.yml` reads every `OM_*` value from your `.env` (via `${VAR:-default}`) instead of hardcoding it; the database, the auto-generated `secret.key` and `admin-credentials.txt` persist in `./data`, attachments in `./files`. The admin password is printed on first launch (also written to `data/admin-credentials.txt`).
 
-**Option B — prebuilt image (published automatically to GHCR):**
+**Option B — prebuilt image (published automatically to GHCR and Docker Hub):**
 
-The [`Docker Image` workflow](.github/workflows/docker-publish.yml) builds multi-arch images (`linux/amd64`, `linux/arm64`) and pushes them to `ghcr.io/chenyuwebwawa/openmail` on every push to `main`, on `v*` tags and on manual dispatch:
+The [`Docker Image` workflow](.github/workflows/docker-publish.yml) builds multi-arch images (`linux/amd64`, `linux/arm64`) on every push to `main`, on `v*` tags and on manual dispatch, and publishes the same tags to both registries:
+
+- **GHCR** — `ghcr.io/chenyuwebwawa/openmail:latest` (uses the built-in `GITHUB_TOKEN`, no secrets required)
+- **Docker Hub** — `chenyutech/openmail:latest` (public, anonymous pull works; pushed via the maintainer's `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` repo secrets)
 
 ```bash
 # if the package is private, log in first with a PAT that has read:packages:
 # docker login ghcr.io -u <github-user>
 docker pull ghcr.io/chenyuwebwawa/openmail:latest
 
+# or from Docker Hub (public, anonymous pull works):
+docker pull chenyutech/openmail:latest
+
 docker run -d --name openmail --restart unless-stopped \
   -p 3000:3000 -p 25:25 -p 587:587 -p 465:465 \
   -p 143:143 -p 993:993 -p 110:110 -p 995:995 \
   -v openmail-data:/app/data -v openmail-files:/app/files \
   -e OM_PRIMARY_DOMAIN=example.com -e OM_BASE_URL=https://mail.example.com \
-  ghcr.io/chenyuwebwawa/openmail:latest
+  ghcr.io/chenyuwebwawa/openmail:latest   # or: chenyutech/openmail:latest
 ```
 
 > `OM_SECRET` is optional: leave it unset and the first boot generates a key, persisted to `/app/data/secret.key` inside the data volume (so recreating the container keeps saved AI keys working). If you set it explicitly, keep it fixed — changing it invalidates every saved AI API key.
@@ -151,11 +157,13 @@ docker run -d --name openmail --restart unless-stopped \
 Or use the prebuilt image through Compose (no local build):
 
 ```bash
+# use either registry — both expose the same tags
 echo "OPENMAIL_IMAGE=ghcr.io/chenyuwebwawa/openmail:latest" >> .env
+# echo "OPENMAIL_IMAGE=chenyutech/openmail:latest" >> .env
 docker compose up -d
 ```
 
-> **Image not available?** Older docs advertised a Docker Hub image under `chenyuwebwawa/openmail`, but **no Docker Hub image is guaranteed to exist**. Prebuilt images are published to GHCR by GitHub Actions. On a brand-new fork, if the package is not published yet (or the pull fails with `manifest unknown` / `repository does not exist`), use Option A, or run **Actions → Docker Image → Run workflow** once. Docker Hub publishing is **optional**: the maintainer can add the repo secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (Docker Hub Access Token, Read & Write), and the workflow will additionally push `docker.io/chenyuwebwawa/openmail`.
+> **Image not available?** Images are built by GitHub Actions and published to **GHCR**, and — when the repo secrets `DOCKERHUB_USERNAME` + `DOCKERHUB_TOKEN` are configured (as they are for this repository) — to **Docker Hub** as `docker.io/chenyutech/openmail` (public, multi-arch, anonymous pull). On a brand-new fork the packages may not exist yet: use Option A, or run **Actions → Docker Image → Run workflow** once; for anonymous GHCR pulls, set the package visibility to Public under repo → Packages → Package settings.
 >
 > **Healthcheck:** the image probes the public route `GET /` (HTTP 200) every 30 s, so `docker compose ps` shows `healthy` once the app is up. **Upgrades:** `docker compose pull && docker compose up -d` for the prebuilt image, or `git pull && docker compose up -d --build` for source builds (source installs use `scripts/update.sh` instead).
 >
@@ -269,7 +277,7 @@ node server/setup.js list-users
 
 ```
 openmail/
-├── .github/workflows/      # CI: build & publish multi-arch images to GHCR (optional Docker Hub)
+├── .github/workflows/      # CI: build & publish multi-arch images to GHCR + Docker Hub
 ├── install.sh              # one-click installer (Node 22 + systemd + langpacks)
 ├── start-windows.bat       # Windows double-click launcher
 ├── scripts/                # update.sh (one-click updater) · doctor.sh (self-diagnosis) · install-langpacks.mjs · baota-adapt.sh (BT panel)

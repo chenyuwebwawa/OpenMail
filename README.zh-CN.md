@@ -86,7 +86,7 @@
 | 方式 | 命令 / 入口 | 适合 |
 | --- | --- | --- |
 | **一键脚本** | `curl -fsSL https://raw.githubusercontent.com/chenyuwebwawa/OpenMail/main/install.sh \| bash` | 全新 Linux VPS（自动装 Node 22 + 源码 + systemd + 语言包） |
-| **Docker** | `docker compose up -d --build`（源码构建）· `ghcr.io/chenyuwebwawa/openmail:latest`（预构建） | 有 Docker / 1Panel 的服务器 |
+| **Docker** | `docker compose up -d --build`（源码构建）· `ghcr.io/chenyuwebwawa/openmail:latest` / `chenyutech/openmail:latest`（预构建） | 有 Docker / 1Panel 的服务器 |
 | **普通服务器手动安装** | `git clone && npm install && npm start` | 开发环境、Windows（`start-windows.bat` 双击启动） |
 | **运维面板** | 宝塔面板指南 · 1Panel 指南 | 已用面板管理的服务器 |
 
@@ -126,21 +126,27 @@ docker compose up -d --build
 
 `docker-compose.yml` 会通过 `${VAR:-默认值}` 读取 `.env` 中的全部 `OM_*` 配置（不再硬编码）；数据库、自动生成的 `secret.key` 与 `admin-credentials.txt` 持久化在 `./data`，附件在 `./files`。管理员初始密码会在首次启动时打印，同时写入 `data/admin-credentials.txt`。
 
-**方式 B —— 预构建镜像（由 GitHub Actions 自动发布到 GHCR）：**
+**方式 B —— 预构建镜像（由 GitHub Actions 自动发布到 GHCR 与 Docker Hub）：**
 
-[`Docker Image` workflow](.github/workflows/docker-publish.yml) 会在 push 到 `main`、打 `v*` 标签以及手动触发时，构建 `linux/amd64` / `linux/arm64` 双架构镜像并推送到 `ghcr.io/chenyuwebwawa/openmail`：
+[`Docker Image` workflow](.github/workflows/docker-publish.yml) 会在 push 到 `main`、打 `v*` 标签以及手动触发时，构建 `linux/amd64` / `linux/arm64` 双架构镜像，并把同一组标签发布到两个仓库：
+
+- **GHCR** —— `ghcr.io/chenyuwebwawa/openmail:latest`（使用内置 `GITHUB_TOKEN`，无需任何 Secret）
+- **Docker Hub** —— `chenyutech/openmail:latest`（Public，可匿名拉取；通过维护者配置的 `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` 仓库 Secret 推送）
 
 ```bash
 # 如果 package 是 private，需要先登录（PAT 勾选 read:packages）：
 # docker login ghcr.io -u <github 用户名>
 docker pull ghcr.io/chenyuwebwawa/openmail:latest
 
+# 或从 Docker Hub 拉取（Public，可匿名）：
+docker pull chenyutech/openmail:latest
+
 docker run -d --name openmail --restart unless-stopped \
   -p 3000:3000 -p 25:25 -p 587:587 -p 465:465 \
   -p 143:143 -p 993:993 -p 110:110 -p 995:995 \
   -v openmail-data:/app/data -v openmail-files:/app/files \
   -e OM_PRIMARY_DOMAIN=example.com -e OM_BASE_URL=https://mail.example.com \
-  ghcr.io/chenyuwebwawa/openmail:latest
+  ghcr.io/chenyuwebwawa/openmail:latest   # 或：chenyutech/openmail:latest
 ```
 
 > `OM_SECRET` 可以留空：首次启动会自动生成密钥并持久化到数据卷内的 `/app/data/secret.key`（重建容器不会失效，已保存的 AI Key 可继续解密）。若显式设置，请保持固定值 —— 修改会导致所有已保存的 AI API Key 失效。
@@ -148,11 +154,13 @@ docker run -d --name openmail --restart unless-stopped \
 也可以用 Compose 直接使用预构建镜像（不本地构建）：
 
 ```bash
+# 两个仓库标签一致，任选其一
 echo "OPENMAIL_IMAGE=ghcr.io/chenyuwebwawa/openmail:latest" >> .env
+# echo "OPENMAIL_IMAGE=chenyutech/openmail:latest" >> .env
 docker compose up -d
 ```
 
-> **镜像拉不到？** 旧版文档中的 Docker Hub 镜像 `chenyuwebwawa/openmail` **不保证存在** —— 项目并不保证在 Docker Hub 发布镜像，预构建镜像由 GitHub Actions 发布到 GHCR。刚 fork 的仓库如果尚未发布 GHCR 包（或拉取时报 `manifest unknown` / `repository does not exist`），请改用方式 A，或在仓库 **Actions → Docker Image → Run workflow** 手动发布一次。Docker Hub 发布是**可选项**：维护者在仓库 Secrets 中配置 `DOCKERHUB_USERNAME` 与 `DOCKERHUB_TOKEN`（Docker Hub Access Token，权限 Read & Write）后，工作流才会额外推送 `docker.io/chenyuwebwawa/openmail`。
+> **镜像拉不到？** 镜像由 GitHub Actions 构建并发布到 **GHCR**，同时在仓库配置了 `DOCKERHUB_USERNAME` + `DOCKERHUB_TOKEN` 两个 Secret 时（本仓库已配置）发布到 **Docker Hub**：`docker.io/chenyutech/openmail`（Public、多架构、可匿名拉取）。刚 fork 的仓库可能还没发布包：请改用方式 A，或在仓库 **Actions → Docker Image → Run workflow** 手动发布一次；GHCR 若要匿名拉取，需在仓库 Packages → Package settings 中把包可见性设为 Public。
 >
 > **健康检查：** 镜像每 30 秒探测公开路由 `GET /`（返回 HTTP 200），应用启动后 `docker compose ps` 会显示 `healthy`。**升级：** 预构建镜像用 `docker compose pull && docker compose up -d`；源码构建用 `git pull && docker compose up -d --build`（源码安装请用 `scripts/update.sh`）。
 >
@@ -266,7 +274,7 @@ node server/setup.js list-users
 
 ```
 openmail/
-├── .github/workflows/      # CI：自动构建并发布多架构镜像到 GHCR（可选 Docker Hub）
+├── .github/workflows/      # CI：自动构建并发布多架构镜像到 GHCR + Docker Hub
 ├── install.sh              # 一键安装脚本（Node 22 + systemd + 语言包）
 ├── start-windows.bat       # Windows 双击启动器
 ├── scripts/                # update.sh（一键更新）· doctor.sh（自检诊断）· install-langpacks.mjs · baota-adapt.sh（宝塔适配）

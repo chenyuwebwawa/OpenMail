@@ -150,8 +150,8 @@ server {
 
 ## 7. Docker Compose 方式（替代 2–6 节）
 
-**注意：项目不保证 Docker Hub 上存在 `chenyuwebwawa/openmail` 镜像。** 预构建镜像由 GitHub Actions 自动发布到
-GHCR（`ghcr.io/chenyuwebwawa/openmail`，Docker Hub 为可选项），因此推荐直接用源码构建：
+**预构建镜像已发布到两个仓库：** Docker Hub（`docker.io/chenyutech/openmail`，Public、多架构）与
+GHCR（`ghcr.io/chenyuwebwawa/openmail`），由 GitHub Actions 自动构建。也可以直接用源码构建（最可控）：
 
 ```bash
 git clone https://github.com/chenyuwebwawa/OpenMail.git && cd OpenMail

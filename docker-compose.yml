@@ -7,9 +7,10 @@
 # 本文件所有配置都通过 ${VAR:-默认值} 读取同目录的 .env（Compose 会自动加载 .env，
 # 无需 env_file，兼容旧版 Compose）。若 .env 中不写某项，则使用下方默认值。
 #
-# 使用预构建镜像（不本地构建）：
+# 使用预构建镜像（不本地构建），两个仓库任选其一（标签一致）：
+#   docker pull chenyutech/openmail:latest          # Docker Hub（Public，可匿名拉取）
 #   docker pull ghcr.io/chenyuwebwawa/openmail:latest
-#   echo "OPENMAIL_IMAGE=ghcr.io/chenyuwebwawa/openmail:latest" >> .env
+#   echo "OPENMAIL_IMAGE=chenyutech/openmail:latest" >> .env
 #   docker compose up -d
 #
 # 注意：下方 ports 端口映射的“容器侧”端口必须与 OM_*_PORT 环境变量一致。
